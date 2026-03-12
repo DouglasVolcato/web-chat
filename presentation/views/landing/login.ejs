@@ -55,17 +55,14 @@
       let googleInitialized = false;
 
       function isStandaloneMode() {
-        const mql = window.matchMedia;
-        if (!mql) return false;
+        if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+          return true;
+        }
+        return false;
+      }
 
-        const standalone = mql("(display-mode: standalone)").matches;
-        const fullscreen = mql("(display-mode: fullscreen)").matches;
-        const minimalUi = mql("(display-mode: minimal-ui)").matches;
-        const wco = mql("(display-mode: window-controls-overlay)").matches;
-        const iosStandalone = window.navigator.standalone === true;
-        const androidTWA = document.referrer.startsWith("android-app://");
-
-        return standalone || fullscreen || minimalUi || wco || iosStandalone || androidTWA;
+      function isMobile() {
+        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       }
 
       function setInstallBlocked(reason) {
@@ -91,7 +88,21 @@
       }
 
       function refreshInstallGate() {
-        if (isStandaloneMode()) {
+        const isStandalone = isStandaloneMode();
+        const mobile = isMobile();
+
+        // On desktop, we don't force installation
+        if (!mobile) {
+          setInstallAllowed();
+          // Keep the install button visible but optional if available
+          if (deferredPrompt) {
+            installRequired?.classList.remove("d-none");
+            installStatus.textContent = "Dica: Você pode instalar como aplicativo para acesso rápido.";
+          }
+          return true;
+        }
+
+        if (isStandalone) {
           setInstallAllowed();
           return true;
         }
@@ -140,11 +151,8 @@
         event.preventDefault();
         deferredPrompt = event;
 
-        if (!isStandaloneMode() && installStatus) {
-          installStatus.textContent = "Pronto para instalar. Clique em 'Instalar app'.";
-        }
-
         refreshInstallGate();
+        initGoogle(); // Re-check if we can show Google button
       });
 
       window.addEventListener("appinstalled", () => {

@@ -2177,7 +2177,7 @@ footer.app-footer {
    =================================================================== */
 
 .wa-settings-wrapper {
-    max-width: 600px;
+    max-width: 800px;
     margin: 0 auto;
     height: 100vh;
     height: 100dvh;
@@ -2185,7 +2185,7 @@ footer.app-footer {
     background: var(--sf-bg-surface);
     border-left: 1px solid var(--sf-border);
     border-right: 1px solid var(--sf-border);
-    -webkit-overflow-scrolling: touch; /* Smooth scroll for iOS */
+    -webkit-overflow-scrolling: touch;
 }
 
 @media (max-width: 767.98px) {

@@ -189,11 +189,11 @@
       
       if (!res.ok) {
         const text = await res.text();
-        alert('Falha ao gerar QR: ' + text);
-        return;
+        throw new Error(text || 'Falha no servidor');
       }
       
       const payload = await res.json();
+      if (!payload.token) throw new Error('Token não recebido');
       
       // Draw QR on canvas
       drawQRCode(qrCanvas, payload.token);
@@ -205,7 +205,8 @@
       // Scroll to QR panel
       qrPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
     } catch(e) {
-      alert('Erro ao gerar QR Code.');
+      console.error(e);
+      alert('Erro ao gerar QR Code: ' + e.message);
     } finally {
       btn.disabled = false;
       btn.innerHTML = '<i class="bi bi-qr-code"></i> Gerar meu QR';
