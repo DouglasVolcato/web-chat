@@ -10,15 +10,15 @@
       name="description"
       content="{{ $brandName }} é um template web com landing page, login Google e chat com IA."
     />
-    <link rel="icon" type="image/x-icon" href="/icons/favicon.svg?v={{ $version }}" />
+    <link rel="icon" type="image/x-icon" href="{{ url "/icons/favicon.svg" }}?v={{ $version }}" />
     <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
     <title>{{ $pageTitle }}</title>
-    <link rel="stylesheet" href="/css/bootstrap.min.css?v={{ $version }}" />
-    <link rel="stylesheet" href="/css/bootstrap-icons.min.css?v={{ $version }}" />
-    <link rel="stylesheet" href="/css/style.css?v={{ $version }}" />
+    <link rel="stylesheet" href="{{ url "/css/bootstrap.min.css" }}?v={{ $version }}" />
+    <link rel="stylesheet" href="{{ url "/css/bootstrap-icons.min.css" }}?v={{ $version }}" />
+    <link rel="stylesheet" href="{{ url "/css/style.css" }}?v={{ $version }}" />
     <meta name="theme-color" content="#0f766e" />
 
-    <script src="/js/htmx.min.js?v={{ $version }}" defer></script>
+    <script src="{{ url "/js/htmx.min.js" }}?v={{ $version }}" defer></script>
     <script>
       (() => {
         const storageKey = "template-theme";

@@ -10,11 +10,16 @@ type ErrorPageData struct {
 	Brand   string
 	Message string
 	Path    string
+	DashboardPath string
 }
 
 func RenderErrorPage(w http.ResponseWriter, data ErrorPageData) error {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.WriteHeader(http.StatusInternalServerError)
+
+	if data.DashboardPath == "" {
+		data.DashboardPath = PathURL("/app/dashboard")
+	}
 
 	tmpl, err := template.New("error-page").Parse(errorPageTemplate)
 	if err != nil {
@@ -48,7 +53,7 @@ const errorPageTemplate = `<!DOCTYPE html>
                             <span class="text-muted small">Caminho:</span>
                             <span class="ms-2 fw-semibold text-body">{{ .Path }}</span>
                         </div>
-                        <a href="/app/dashboard" class="btn btn-primary mt-4">Voltar para o painel</a>
+                        <a href="{{ .DashboardPath }}" class="btn btn-primary mt-4">Voltar para o painel</a>
                     </div>
                 </div>
             </div>

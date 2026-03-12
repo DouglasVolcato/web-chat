@@ -10,26 +10,26 @@
 <!-- Desktop Sidebar -->
 <aside class="app-sidebar d-none d-lg-flex flex-column" style="overflow-y: auto;">
     <div class="mb-5 px-2">
-        <a href="/app/dashboard" class="d-flex align-items-center gap-2 text-decoration-none">
-            <img src="/icons/logo.png" alt="Logo" width="32" height="32">
+        <a href="{{ url "/app/dashboard" }}" class="d-flex align-items-center gap-2 text-decoration-none">
+            <img src="{{ url "/icons/logo.png" }}" alt="Logo" width="32" height="32">
             <span class="fw-bold fs-5" style="color: var(--sf-text-main);">Super Template</span>
         </a>
     </div>
 
     <nav class="sidebar-nav flex-grow-1">
-        <a href="/app/dashboard" class="nav-link {{ if eq $current "dashboard" }}active{{ end }}">
+        <a href="{{ url "/app/dashboard" }}" class="nav-link {{ if eq $current "dashboard" }}active{{ end }}">
             <i class="bi bi-grid"></i>
             <span>Dashboard</span>
         </a>
-        <a href="/app/chat" class="nav-link {{ if eq $current "chat" }}active{{ end }}">
+        <a href="{{ url "/app/chat" }}" class="nav-link {{ if eq $current "chat" }}active{{ end }}">
             <i class="bi bi-chat-dots"></i>
             <span>Chat com IA</span>
         </a>
-        <a href="/app/subscription" class="nav-link {{ if eq $current "subscription" }}active{{ end }}">
+        <a href="{{ url "/app/subscription" }}" class="nav-link {{ if eq $current "subscription" }}active{{ end }}">
             <i class="bi bi-credit-card"></i>
             <span>Assinatura</span>
         </a>
-        <a href="/app/profile" class="nav-link {{ if eq $current "profile" }}active{{ end }}">
+        <a href="{{ url "/app/profile" }}" class="nav-link {{ if eq $current "profile" }}active{{ end }}">
             <i class="bi bi-person"></i>
             <span>Perfil</span>
         </a>
@@ -48,7 +48,7 @@
         </div>
         <div class="mt-3 d-flex justify-content-between align-items-center px-2">
             {{ template "theme-toggle.ejs" (dict "ThemeButtonClasses" "theme-switch" "ThemeLabelClasses" "d-none") }}
-            <form class="m-0" action="/logout" method="post" hx-post="/logout" hx-swap="none">
+            <form class="m-0" action="{{ url "/logout" }}" method="post" hx-post="{{ url "/logout" }}" hx-swap="none">
                 <button type="submit" class="btn btn-ghost btn-sm text-danger" title="Sair">
                     <i class="bi bi-box-arrow-right fs-5"></i>
                 </button>
@@ -61,26 +61,26 @@
 <div class="offcanvas offcanvas-start bg-surface" tabindex="-1" id="sidebarOffcanvas">
     <div class="offcanvas-header">
         <div class="d-flex align-items-center gap-2 flex-wrap">
-            <img src="/icons/logo.png" alt="Logo" width="28" height="28">
+            <img src="{{ url "/icons/logo.png" }}" alt="Logo" width="28" height="28">
             <h5 class="offcanvas-title fw-bold">Super Template</h5>
         </div>
         <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
     </div>
     <div class="offcanvas-body p-0">
         <nav class="sidebar-nav d-flex flex-column p-3">
-            <a href="/app/dashboard" class="nav-link {{ if eq $current "dashboard" }}active{{ end }}">
+            <a href="{{ url "/app/dashboard" }}" class="nav-link {{ if eq $current "dashboard" }}active{{ end }}">
                 <i class="bi bi-grid"></i> Dashboard
             </a>
-            <a href="/app/chat" class="nav-link {{ if eq $current "chat" }}active{{ end }}">
+            <a href="{{ url "/app/chat" }}" class="nav-link {{ if eq $current "chat" }}active{{ end }}">
                 <i class="bi bi-chat-dots"></i> Chat com IA
             </a>
-            <a href="/app/profile" class="nav-link {{ if eq $current "profile" }}active{{ end }}">
+            <a href="{{ url "/app/profile" }}" class="nav-link {{ if eq $current "profile" }}active{{ end }}">
                 <i class="bi bi-person"></i> Perfil
             </a>
         </nav>
         <div class="mt-auto p-3 border-top">
             {{ template "theme-toggle.ejs" (dict "ThemeButtonClasses" "theme-switch" "ThemeLabelClasses" "d-none") }}
-            <form action="/logout" method="post" class="mt-3 w-100">
+            <form action="{{ url "/logout" }}" method="post" class="mt-3 w-100">
                 <button class="btn btn-outline-danger w-100">Sair</button>
             </form>
         </div>

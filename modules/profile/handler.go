@@ -117,7 +117,7 @@ func (h *Handler) updateName(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, "/app/profile?status=updated", http.StatusSeeOther)
+	http.Redirect(w, r, helpers.PathURL("/app/profile?status=updated"), http.StatusSeeOther)
 }
 
 func (h *Handler) deleteAccount(w http.ResponseWriter, r *http.Request) {
@@ -154,7 +154,7 @@ func (h *Handler) deleteAccount(w http.ResponseWriter, r *http.Request) {
 	}
 
 	helpers.ClearAuthCookie(w)
-	http.Redirect(w, r, "/login?status=account_deleted", http.StatusSeeOther)
+	http.Redirect(w, r, helpers.PathURL("/login?status=account_deleted"), http.StatusSeeOther)
 }
 
 func (h *Handler) renderProfileWithAlert(w http.ResponseWriter, r *http.Request, tx *sql.Tx, userID string, alert map[string]any) {

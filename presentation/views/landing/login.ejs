@@ -7,7 +7,7 @@
             <div class="card shadow-lg border-0">
               <div class="card-body p-4">
                 <div class="text-center mb-4">
-                  <img src="/icons/logo.png" alt="Logo" width="48" height="48" class="mb-2">
+                  <img src="{{ url "/icons/logo.png" }}" alt="Logo" width="48" height="48" class="mb-2">
                   <h1 class="h4 fw-bold mb-1">Entrar no Super Template</h1>
                   <p class="text-secondary">Faça login para acessar sua área segura e conversar com a IA.</p>
                 </div>
@@ -16,14 +16,14 @@
                   <div id="google-btn"></div>
                 </div>
 
-                <form id="google-auth-form" hx-post="/auth/google" hx-target="#login-feedback" hx-swap="innerHTML">
+                <form id="google-auth-form" hx-post="{{ url "/auth/google" }}" hx-target="#login-feedback" hx-swap="innerHTML">
                   <input type="hidden" name="credential" id="google-credential-input">
                 </form>
 
                 <div id="login-feedback" class="mt-3"></div>
 
                 <div class="text-center mt-4">
-                  <a href="/" class="text-decoration-none">Voltar para a landing page</a>
+                  <a href="{{ url "/" }}" class="text-decoration-none">Voltar para a landing page</a>
                 </div>
               </div>
             </div>

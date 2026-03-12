@@ -10,14 +10,14 @@
           <h1 class="fw-bold mb-1">Novo chat</h1>
           <p class="text-secondary mb-0">Crie um chat para conversar com a IA.</p>
         </div>
-        <a class="btn btn-outline-secondary" href="/app/chat">
+        <a class="btn btn-outline-secondary" href="{{ url "/app/chat" }}">
           <i class="bi bi-arrow-left me-1"></i> Voltar
         </a>
       </div>
 
       <div class="card border-0 shadow-sm">
         <div class="card-body">
-          <form class="d-flex flex-column gap-3" method="post" action="/app/chat" data-overlay-submit>
+          <form class="d-flex flex-column gap-3" method="post" action="{{ url "/app/chat" }}" data-overlay-submit>
             <div>
               <label class="form-label fw-semibold" for="chatTitle">Título</label>
               <input class="form-control" id="chatTitle" name="title" placeholder="Ex: Onboarding do cliente" required>
@@ -27,7 +27,7 @@
               <textarea class="form-control" id="chatContext" name="context" rows="4" placeholder="Descreva o contexto ou objetivo da conversa."></textarea>
             </div>
             <div class="d-flex justify-content-end gap-2">
-              <a class="btn btn-light" href="/app/chat">Cancelar</a>
+              <a class="btn btn-light" href="{{ url "/app/chat" }}">Cancelar</a>
               <button class="btn btn-primary" type="submit">Criar chat</button>
             </div>
           </form>

@@ -10,7 +10,7 @@
           <h1 class="fw-bold mb-1">Chats</h1>
           <p class="text-secondary mb-0">Acompanhe suas conversas com a IA.</p>
         </div>
-        <a class="btn btn-primary" href="/app/chat/new">
+        <a class="btn btn-primary" href="{{ url "/app/chat/new" }}">
           <i class="bi bi-plus-lg"></i> Novo chat
         </a>
       </div>
@@ -30,13 +30,13 @@
                       <i class="bi bi-chat-dots"></i>
                     </div>
                     <div class="chat-list-content">
-                      <a class="chat-list-title" href="/app/chat/{{ .ID }}">{{ default .Title "Chat" }}</a>
+                      <a class="chat-list-title" href='{{ url (printf "/app/chat/%s" .ID) }}'>{{ default .Title "Chat" }}</a>
                       <div class="chat-list-subtitle">Atualizado em {{ .UpdatedAt.Format "02/01/2006" }}</div>
                     </div>
                   </div>
                   <div class="chat-list-actions">
-                    <a class="btn btn-sm btn-outline-secondary" href="/app/chat/{{ .ID }}">Abrir</a>
-                    <button class="btn btn-sm btn-outline-danger" type="button" hx-delete="/app/chat/{{ .ID }}" hx-target="body" hx-swap="none" hx-confirm="Deseja remover este chat?" aria-label="Remover chat">
+                    <a class="btn btn-sm btn-outline-secondary" href='{{ url (printf "/app/chat/%s" .ID) }}'>Abrir</a>
+                    <button class="btn btn-sm btn-outline-danger" type="button" hx-delete='{{ url (printf "/app/chat/%s" .ID) }}' hx-target="body" hx-swap="none" hx-confirm="Deseja remover este chat?" aria-label="Remover chat">
                       <i class="bi bi-trash"></i>
                     </button>
                   </div>

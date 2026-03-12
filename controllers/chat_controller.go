@@ -198,7 +198,7 @@ func (c *ChatController) createChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, "/app/chat/"+chat.ID, http.StatusSeeOther)
+	http.Redirect(w, r, helpers.PathURL("/app/chat/"+chat.ID), http.StatusSeeOther)
 }
 
 func (c *ChatController) updateChat(w http.ResponseWriter, r *http.Request) {
@@ -233,7 +233,7 @@ func (c *ChatController) updateChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, "/app/chat/"+chat.ID+"?status=updated", http.StatusSeeOther)
+	http.Redirect(w, r, helpers.PathURL("/app/chat/"+chat.ID+"?status=updated"), http.StatusSeeOther)
 }
 
 func (c *ChatController) deleteChat(w http.ResponseWriter, r *http.Request) {

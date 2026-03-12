@@ -5,7 +5,7 @@
 </div>
 
 <div id="aiResponsePlaceholder" 
-     hx-get="/app/chat/{{ .ChatID }}/ai-response" 
+     hx-get='{{ url (printf "/app/chat/%s/ai-response" .ChatID) }}' 
      hx-trigger="load" 
      hx-swap="outerHTML"
      class="typing-indicator-wrap">

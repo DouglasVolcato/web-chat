@@ -34,6 +34,9 @@ func Render(w http.ResponseWriter, view string, data any) error {
 	}
 
 	funcMap := template.FuncMap{
+		"url": func(path string) string {
+			return PathURL(path)
+		},
 		"default": func(value any, defaultValue string) string {
 			switch v := value.(type) {
 			case string:

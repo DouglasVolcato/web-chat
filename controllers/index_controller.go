@@ -47,7 +47,7 @@ func (c *IndexController) RegisterRoutes(router chi.Router) {
 		})
 
 		r.Get("/register", func(w http.ResponseWriter, r *http.Request) {
-			http.Redirect(w, r, "/login", http.StatusTemporaryRedirect)
+			http.Redirect(w, r, helpers.PathURL("/login"), http.StatusTemporaryRedirect)
 		})
 
 		r.Post("/logout", func(w http.ResponseWriter, r *http.Request) {

@@ -36,7 +36,7 @@ func (c *AppController) RegisterRoutes(router chi.Router) {
 		})
 
 		r.Get("/app", func(w http.ResponseWriter, r *http.Request) {
-			http.Redirect(w, r, "/app/dashboard", http.StatusSeeOther)
+			http.Redirect(w, r, helpers.PathURL("/app/dashboard"), http.StatusSeeOther)
 		})
 
 		r.Get("/app/dashboard", func(w http.ResponseWriter, r *http.Request) {

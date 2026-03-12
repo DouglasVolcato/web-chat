@@ -10,12 +10,12 @@
           <h1 class="fw-bold mb-1">Editar chat</h1>
           <p class="text-secondary mb-0">Atualize o título ou o contexto.</p>
         </div>
-        <a class="btn btn-outline-secondary" href="/app/chat/{{ .Chat.ID }}">Voltar</a>
+        <a class="btn btn-outline-secondary" href='{{ url (printf "/app/chat/%s" .Chat.ID) }}'>Voltar</a>
       </div>
 
       <div class="card border-0 shadow-sm">
         <div class="card-body">
-          <form class="d-flex flex-column gap-3" method="post" action="/app/chat/{{ .Chat.ID }}/edit" data-overlay-submit>
+          <form class="d-flex flex-column gap-3" method="post" action='{{ url (printf "/app/chat/%s/edit" .Chat.ID) }}' data-overlay-submit>
             <div>
               <label class="form-label fw-semibold" for="chatTitle">Título</label>
               <input type="text" class="form-control" id="chatTitle" name="title" value="{{ default .Chat.Title "Chat" }}" required>
@@ -25,7 +25,7 @@
               <textarea class="form-control" id="chatContext" name="context" rows="4">{{ default .Chat.Context "" }}</textarea>
             </div>
             <div class="d-flex justify-content-end gap-2">
-              <a class="btn btn-light" href="/app/chat/{{ .Chat.ID }}">Cancelar</a>
+              <a class="btn btn-light" href='{{ url (printf "/app/chat/%s" .Chat.ID) }}'>Cancelar</a>
               <button class="btn btn-primary" type="submit">Salvar</button>
             </div>
           </form>

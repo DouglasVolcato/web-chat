@@ -1,6 +1,6 @@
 {{- $version := default .cacheVersion "1" -}}
-    <script src="/js/bootstrap.bundle.min.js?v={{ $version }}" defer></script>
-    <script src="/js/htmx.min.js?v={{ $version }}" defer></script>
+    <script src="{{ url "/js/bootstrap.bundle.min.js" }}?v={{ $version }}" defer></script>
+    <script src="{{ url "/js/htmx.min.js" }}?v={{ $version }}" defer></script>
     <script>
       (() => {
         const storageKey = "template-theme";

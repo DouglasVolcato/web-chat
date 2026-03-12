@@ -19,7 +19,7 @@
           <div class="card border-0 shadow-sm">
             <div class="card-body">
               <h2 class="h5 mb-3">Dados do perfil</h2>
-              <form method="post" action="/app/profile/name" class="d-flex flex-column gap-3">
+              <form method="post" action="{{ url "/app/profile/name" }}" class="d-flex flex-column gap-3">
                 <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
                 <div>
                   <label for="profileName" class="form-label fw-semibold">Nome</label>
@@ -42,7 +42,7 @@
             <div class="card-body">
               <h2 class="h5 text-danger mb-2">Excluir conta</h2>
               <p class="text-secondary">Essa ação é irreversível e encerra seu acesso imediatamente.</p>
-              <form method="post" action="/app/profile/delete" class="d-flex flex-column gap-3">
+              <form method="post" action="{{ url "/app/profile/delete" }}" class="d-flex flex-column gap-3">
                 <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
                 <div>
                   <label for="deleteConfirm" class="form-label fw-semibold">Digite <code>EXCLUIR</code> para confirmar</label>

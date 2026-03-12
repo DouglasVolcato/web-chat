@@ -1,6 +1,7 @@
 package main
 
 import (
+	"app/helpers"
 	"bytes"
 	"fmt"
 	"io"
@@ -73,36 +74,53 @@ func (app *App) router() http.Handler {
 	mux.Use(httprate.LimitByIP(70, time.Minute))
 	mux.Use(cors.Handler(config))
 
-	mux.Handle("/metrics", promhttp.HandlerFor(metricsRegistry, promhttp.HandlerOpts{}))
+	basePath := helpers.URLPath()
+
+	mux.Handle(helpers.PathURL("/metrics"), promhttp.HandlerFor(metricsRegistry, promhttp.HandlerOpts{}))
+
 	fileServer := http.FileServer(http.Dir("presentation/public"))
-	mux.Handle("/css/*", http.StripPrefix("/", fileServer))
-	mux.Handle("/js/*", http.StripPrefix("/", fileServer))
-	mux.Handle("/icons/*", http.StripPrefix("/", fileServer))
-	mux.Handle("/robots.txt", http.StripPrefix("/", fileServer))
-	mux.Handle("/sitemap.xml", http.StripPrefix("/", fileServer))
-	mux.Handle("/manifest.json", http.StripPrefix("/", fileServer))
-	mux.Handle("/sw.js", http.StripPrefix("/", fileServer))
-
-	indexController := controllers.IndexController{}
-	indexController.RegisterRoutes(mux)
-
-	paymentsController, err := controllers.NewPaymentsController()
-	var paymentService *payments.Service
-	if err != nil {
-		log.Printf("payment routes disabled: %v", err)
-	} else {
-		paymentService = paymentsController.Service()
+	stripPrefix := "/"
+	if basePath != "" {
+		stripPrefix = basePath + "/"
 	}
-	paymentsController.RegisterRoutes(mux)
+	mux.Handle(helpers.PathURL("/css/*"), http.StripPrefix(stripPrefix, fileServer))
+	mux.Handle(helpers.PathURL("/js/*"), http.StripPrefix(stripPrefix, fileServer))
+	mux.Handle(helpers.PathURL("/icons/*"), http.StripPrefix(stripPrefix, fileServer))
+	mux.Handle(helpers.PathURL("/robots.txt"), http.StripPrefix(stripPrefix, fileServer))
+	mux.Handle(helpers.PathURL("/sitemap.xml"), http.StripPrefix(stripPrefix, fileServer))
+	mux.Handle(helpers.PathURL("/manifest.json"), http.StripPrefix(stripPrefix, fileServer))
+	mux.Handle(helpers.PathURL("/sw.js"), http.StripPrefix(stripPrefix, fileServer))
 
-	appController := controllers.NewAppController(paymentService)
-	appController.RegisterRoutes(mux)
+	registerAppRoutes := func(router chi.Router) {
+		indexController := controllers.IndexController{}
+		indexController.RegisterRoutes(router)
 
-	chatController := controllers.ChatController{}
-	chatController.RegisterRoutes(mux)
+		paymentsController, err := controllers.NewPaymentsController()
+		var paymentService *payments.Service
+		if err != nil {
+			log.Printf("payment routes disabled: %v", err)
+		} else {
+			paymentService = paymentsController.Service()
+		}
+		paymentsController.RegisterRoutes(router)
 
-	profileHandler := profile.NewHandler(profile.NewService(profile.NewPostgresRepository()))
-	profileHandler.RegisterRoutes(mux)
+		appController := controllers.NewAppController(paymentService)
+		appController.RegisterRoutes(router)
+
+		chatController := controllers.ChatController{}
+		chatController.RegisterRoutes(router)
+
+		profileHandler := profile.NewHandler(profile.NewService(profile.NewPostgresRepository()))
+		profileHandler.RegisterRoutes(router)
+	}
+
+	if basePath != "" {
+		mux.Route(basePath, func(r chi.Router) {
+			registerAppRoutes(r)
+		})
+	} else {
+		registerAppRoutes(mux)
+	}
 
 	// Payment Module
 	if app.DB == nil {

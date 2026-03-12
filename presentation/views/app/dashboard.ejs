@@ -9,7 +9,7 @@
             <h1 class="h3 fw-bold mb-1">Bem-vindo, {{ .User.Name }}</h1>
             <p class="text-secondary">Sua área autenticada está pronta para receber novas features.</p>
           </div>
-          <a class="btn btn-primary" href="/app/chat/new">
+          <a class="btn btn-primary" href="{{ url "/app/chat/new" }}">
             <i class="bi bi-plus-lg"></i>
             Novo chat
           </a>
@@ -28,7 +28,7 @@
                           <div class="fw-semibold">{{ default .Title "Chat" }}</div>
                           <small class="text-secondary">Atualizado em {{ .UpdatedAt.Format "02/01/2006" }}</small>
                         </div>
-                        <a class="btn btn-sm btn-outline-primary" href="/app/chat/{{ .ID }}">Abrir</a>
+                        <a class="btn btn-sm btn-outline-primary" href='{{ url (printf "/app/chat/%s" .ID) }}'>Abrir</a>
                       </li>
                     {{ end }}
                   </ul>
