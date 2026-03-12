@@ -1,56 +1,140 @@
-{{ template "head.ejs" (dict "title" "Super Template - Chats" "brand" "Super Template") }}
+{{ template "head.ejs" (dict "title" "Web Chat - Chats IA" "brand" "Web Chat") }}
+<body class="wa-body">
 
-<body class="bg-body d-flex flex-column min-vh-100">
-  {{ template "sidebar.ejs" (dict "currentPage" "chat" "user" .User) }}
-
-  <main class="app-main">
-    <div class="container-xl py-4">
-      <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
-        <div>
-          <h1 class="fw-bold mb-1">Chats</h1>
-          <p class="text-secondary mb-0">Acompanhe suas conversas com a IA.</p>
+<div class="wa-app">
+  <!-- Left Panel: AI Chats List -->
+  <aside class="wa-sidebar show" id="wa-sidebar">
+    <header class="wa-sidebar-header">
+      <div class="wa-sidebar-header-top">
+        <div class="wa-user-info">
+          <div class="wa-avatar wa-avatar--self">
+            <i class="bi bi-robot"></i>
+          </div>
+          <span class="wa-sidebar-title">Chats com IA</span>
         </div>
-        <a class="btn btn-primary" href="{{ url "/app/chat/new" }}">
+        <div class="wa-sidebar-actions">
+          <a href="{{ url "/app/chat/new" }}" class="wa-icon-btn wa-icon-btn--accent" title="Novo chat" id="new-chat-btn">
+            <i class="bi bi-plus-lg"></i>
+          </a>
+          <a href="{{ url "/app/messages" }}" class="wa-icon-btn" title="Mensagens diretas">
+            <i class="bi bi-chat-left-text"></i>
+          </a>
+          <a href="{{ url "/app/profile" }}" class="wa-icon-btn" title="Configurações">
+            <i class="bi bi-gear"></i>
+          </a>
+        </div>
+      </div>
+      <div class="wa-search-bar">
+        <i class="bi bi-search"></i>
+        <input type="text" id="chat-search" class="wa-search-input" placeholder="Pesquisar chat..." autocomplete="off">
+      </div>
+    </header>
+
+    {{ if .Alert }}
+    <div class="wa-alert wa-alert--{{ if eq (index .Alert "Type") "success" }}success{{ else }}danger{{ end }}" style="margin: 0.5rem;">
+      <i class="bi {{ if eq (index .Alert "Type") "success" }}bi-check-circle-fill{{ else }}bi-exclamation-triangle-fill{{ end }}"></i>
+      <span>{{ index .Alert "Message" }}</span>
+    </div>
+    {{ end }}
+
+    <div class="wa-chat-list" id="chat-list" role="list">
+      {{ if .Chats }}
+        {{ range .Chats }}
+        <a role="listitem"
+           class="wa-chat-item"
+           href='{{ url (printf "/app/chat/%s" .ID) }}'
+           data-contact-name="{{ default .Title "Chat" }}">
+          <div class="wa-avatar wa-avatar--ai">
+            <i class="bi bi-chat-dots"></i>
+          </div>
+          <div class="wa-chat-item-content">
+            <div class="wa-chat-item-top">
+              <strong class="wa-chat-item-name">{{ default .Title "Chat" }}</strong>
+              <span class="wa-chat-item-time">{{ .UpdatedAt.Format "02/01" }}</span>
+            </div>
+            <p class="wa-chat-item-preview">
+              {{ if .Context }}{{ .Context }}{{ else }}<i class="bi bi-robot"></i> Chat com assistente IA{{ end }}
+            </p>
+          </div>
+          <button class="wa-chat-delete-btn" type="button"
+                  hx-delete='{{ url (printf "/app/chat/%s" .ID) }}'
+                  hx-target="body" hx-swap="none"
+                  hx-confirm="Deseja remover este chat?"
+                  aria-label="Remover chat"
+                  onclick="event.preventDefault(); event.stopPropagation();">
+            <i class="bi bi-trash3"></i>
+          </button>
+        </a>
+        {{ end }}
+      {{ else }}
+        <div class="wa-empty-list">
+          <div class="wa-empty-list-icon">
+            <i class="bi bi-robot"></i>
+          </div>
+          <p>Nenhum chat criado</p>
+          <span class="text-secondary">Clique no <strong>+</strong> acima para criar seu primeiro chat com IA.</span>
+        </div>
+      {{ end }}
+    </div>
+  </aside>
+
+  <!-- Right Panel: Welcome / Info -->
+  <main class="wa-main">
+    <!-- Mobile Toggle -->
+    <button class="wa-mobile-toggle d-lg-none" type="button" id="open-sidebar-btn">
+      <i class="bi bi-list"></i>
+    </button>
+
+    <div class="wa-welcome">
+      <div class="wa-welcome-inner">
+        <div class="wa-welcome-icon">
+          <i class="bi bi-robot"></i>
+        </div>
+        <h2 class="wa-welcome-title">Chat com IA</h2>
+        <p class="wa-welcome-text">
+          Converse com a inteligência artificial sobre qualquer assunto.<br>
+          Selecione um chat da lista ou crie um novo.
+        </p>
+        <a href="{{ url "/app/chat/new" }}" class="wa-btn wa-btn--primary wa-btn--lg">
           <i class="bi bi-plus-lg"></i> Novo chat
         </a>
-      </div>
-
-      {{ if .Alert }}
-      {{ template "alert.ejs" .Alert }}
-      {{ end }}
-
-      <div class="card chat-list-card">
-        <div class="card-body">
-          {{ if .Chats }}
-            <div class="d-flex flex-column">
-              {{ range .Chats }}
-                <div class="chat-list-item">
-                  <div class="chat-list-meta">
-                    <div class="chat-list-avatar">
-                      <i class="bi bi-chat-dots"></i>
-                    </div>
-                    <div class="chat-list-content">
-                      <a class="chat-list-title" href='{{ url (printf "/app/chat/%s" .ID) }}'>{{ default .Title "Chat" }}</a>
-                      <div class="chat-list-subtitle">Atualizado em {{ .UpdatedAt.Format "02/01/2006" }}</div>
-                    </div>
-                  </div>
-                  <div class="chat-list-actions">
-                    <a class="btn btn-sm btn-outline-secondary" href='{{ url (printf "/app/chat/%s" .ID) }}'>Abrir</a>
-                    <button class="btn btn-sm btn-outline-danger" type="button" hx-delete='{{ url (printf "/app/chat/%s" .ID) }}' hx-target="body" hx-swap="none" hx-confirm="Deseja remover este chat?" aria-label="Remover chat">
-                      <i class="bi bi-trash"></i>
-                    </button>
-                  </div>
-                </div>
-              {{ end }}
-            </div>
-          {{ else }}
-            <p class="text-secondary">Você ainda não criou nenhum chat.</p>
-          {{ end }}
+        <div class="wa-welcome-features" style="margin-top: 2rem;">
+          <div class="wa-welcome-feature">
+            <i class="bi bi-lightning-charge"></i>
+            <span>Respostas inteligentes</span>
+          </div>
+          <div class="wa-welcome-feature">
+            <i class="bi bi-sliders"></i>
+            <span>Defina contexto para respostas melhores</span>
+          </div>
+          <div class="wa-welcome-feature">
+            <i class="bi bi-clock-history"></i>
+            <span>Histórico de conversas</span>
+          </div>
         </div>
       </div>
     </div>
   </main>
+</div>
 
-  {{ template "scripts.ejs" . }}
+<script>
+  // Search filter
+  const searchInput = document.getElementById('chat-search');
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      const q = searchInput.value.toLowerCase();
+      document.querySelectorAll('.wa-chat-item').forEach(item => {
+        const name = (item.dataset.contactName || '').toLowerCase();
+        item.style.display = name.includes(q) ? '' : 'none';
+      });
+    });
+  }
+
+  // Mobile sidebar toggle
+  const sidebar = document.getElementById('wa-sidebar');
+  document.getElementById('open-sidebar-btn')?.addEventListener('click', () => sidebar?.classList.add('show'));
+</script>
+
+{{ template "scripts.ejs" . }}
 </body>
 </html>

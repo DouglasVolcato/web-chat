@@ -1,59 +1,101 @@
-{{ template "head.ejs" (dict "title" "Super Template - Dashboard" "brand" "Super Template") }}
-  <body class="bg-body d-flex flex-column min-vh-100">
-    {{ template "sidebar.ejs" (dict "currentPage" "dashboard" "user" .User) }}
+{{ template "head.ejs" (dict "title" "Web Chat - Início" "brand" "Web Chat") }}
+<body class="wa-body">
 
-    <main class="app-main">
-      <section class="container py-4">
-        <div class="d-flex flex-column flex-lg-row align-items-start align-items-lg-center justify-content-between mb-4">
-          <div>
-            <h1 class="h3 fw-bold mb-1">Bem-vindo, {{ .User.Name }}</h1>
-            <p class="text-secondary">Sua área autenticada está pronta para receber novas features.</p>
+<div class="wa-settings-wrapper" style="max-width: 700px;">
+  <!-- Header -->
+  <header class="wa-settings-header">
+    <div class="wa-avatar wa-avatar--self" style="width: 36px; height: 36px; font-size: 0.9rem;">
+      {{ if .User }}{{ slice .User.Name 0 1 }}{{ else }}U{{ end }}
+    </div>
+    <h1 class="wa-settings-title">Olá, {{ .User.Name }}!</h1>
+    <div style="margin-left: auto; display: flex; gap: 0.25rem;">
+      <a href="{{ url "/app/profile" }}" class="wa-icon-btn" title="Configurações">
+        <i class="bi bi-gear"></i>
+      </a>
+    </div>
+  </header>
+
+  <div class="wa-settings-content">
+    <!-- Quick Actions -->
+    <section class="wa-settings-section">
+      <div class="wa-dashboard-actions">
+        <a href="{{ url "/app/messages" }}" class="wa-dashboard-card">
+          <div class="wa-dashboard-card-icon wa-dashboard-card-icon--messages">
+            <i class="bi bi-chat-left-text"></i>
           </div>
-          <a class="btn btn-primary" href="{{ url "/app/chat/new" }}">
+          <div class="wa-dashboard-card-info">
+            <strong>Mensagens</strong>
+            <span>Conversas com contatos</span>
+          </div>
+          <i class="bi bi-chevron-right wa-dashboard-card-arrow"></i>
+        </a>
+        <a href="{{ url "/app/chat" }}" class="wa-dashboard-card">
+          <div class="wa-dashboard-card-icon wa-dashboard-card-icon--ai">
+            <i class="bi bi-robot"></i>
+          </div>
+          <div class="wa-dashboard-card-info">
+            <strong>Chat com IA</strong>
+            <span>Converse com assistente</span>
+          </div>
+          <i class="bi bi-chevron-right wa-dashboard-card-arrow"></i>
+        </a>
+        <a href="{{ url "/app/chat/new" }}" class="wa-dashboard-card">
+          <div class="wa-dashboard-card-icon wa-dashboard-card-icon--new">
             <i class="bi bi-plus-lg"></i>
-            Novo chat
+          </div>
+          <div class="wa-dashboard-card-info">
+            <strong>Novo chat IA</strong>
+            <span>Criar uma nova conversa</span>
+          </div>
+          <i class="bi bi-chevron-right wa-dashboard-card-arrow"></i>
+        </a>
+        <a href="{{ url "/app/profile" }}" class="wa-dashboard-card">
+          <div class="wa-dashboard-card-icon wa-dashboard-card-icon--profile">
+            <i class="bi bi-qr-code"></i>
+          </div>
+          <div class="wa-dashboard-card-info">
+            <strong>Adicionar contato</strong>
+            <span>Via QR Code no perfil</span>
+          </div>
+          <i class="bi bi-chevron-right wa-dashboard-card-arrow"></i>
+        </a>
+      </div>
+    </section>
+
+    <!-- Recent Chats -->
+    <section class="wa-settings-section">
+      <h3 class="wa-settings-section-title">
+        <i class="bi bi-clock-history"></i>
+        Chats recentes
+      </h3>
+      {{ if .Chats }}
+        <div class="wa-dashboard-recent-list">
+          {{ range .Chats }}
+          <a href='{{ url (printf "/app/chat/%s" .ID) }}' class="wa-dashboard-recent-item">
+            <div class="wa-avatar wa-avatar--sm wa-avatar--ai">
+              <i class="bi bi-chat-dots" style="font-size: 0.8rem;"></i>
+            </div>
+            <div class="wa-dashboard-recent-info">
+              <strong>{{ default .Title "Chat" }}</strong>
+              <span>Atualizado em {{ .UpdatedAt.Format "02/01/2006" }}</span>
+            </div>
+            <i class="bi bi-chevron-right wa-dashboard-card-arrow"></i>
+          </a>
+          {{ end }}
+        </div>
+      {{ else }}
+        <div class="wa-dashboard-empty">
+          <i class="bi bi-chat-dots"></i>
+          <p>Nenhum chat criado ainda</p>
+          <a href="{{ url "/app/chat/new" }}" class="wa-btn wa-btn--outline wa-btn--sm">
+            <i class="bi bi-plus-lg"></i> Criar primeiro chat
           </a>
         </div>
+      {{ end }}
+    </section>
+  </div>
+</div>
 
-        <div class="row g-4">
-          <div class="col-12 col-lg-6">
-            <div class="card border-0 shadow-sm h-100">
-              <div class="card-body">
-                <h5 class="fw-bold">Chats recentes</h5>
-                {{ if .Chats }}
-                  <ul class="list-group list-group-flush">
-                    {{ range .Chats }}
-                      <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <div>
-                          <div class="fw-semibold">{{ default .Title "Chat" }}</div>
-                          <small class="text-secondary">Atualizado em {{ .UpdatedAt.Format "02/01/2006" }}</small>
-                        </div>
-                        <a class="btn btn-sm btn-outline-primary" href='{{ url (printf "/app/chat/%s" .ID) }}'>Abrir</a>
-                      </li>
-                    {{ end }}
-                  </ul>
-                {{ else }}
-                  <p class="text-secondary">Nenhum chat criado ainda. Clique em "Novo chat" para começar.</p>
-                {{ end }}
-              </div>
-            </div>
-          </div>
-          <div class="col-12 col-lg-6">
-            <div class="card border-0 shadow-sm h-100">
-              <div class="card-body">
-                <h5 class="fw-bold">Próximos passos</h5>
-                <ol class="text-secondary mb-0">
-                  <li>Customize a landing page e o layout.</li>
-                  <li>Adicione novas tabelas e migrations.</li>
-                  <li>Crie seus próprios fluxos de negócio.</li>
-                </ol>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-    </main>
-
-    {{ template "scripts.ejs" . }}
-  </body>
+{{ template "scripts.ejs" . }}
+</body>
 </html>

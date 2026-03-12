@@ -1,56 +1,96 @@
-{{ template "head.ejs" (dict "title" "Super Template - Chat" "brand" "Super Template") }}
+{{ template "head.ejs" (dict "title" "Web Chat - Chat IA" "brand" "Web Chat") }}
+<body class="wa-body">
 
-<body class="bg-body d-flex flex-column min-vh-100">
-  {{ template "sidebar.ejs" (dict "currentPage" "chat" "user" .User) }}
-
-  <main class="app-main">
-    <div class="container-xl py-4">
-      {{ if .Alert }}
-      {{ template "alert.ejs" .Alert }}
-      {{ end }}
-
-      <div class="chat-shell">
-        <div class="chat-shell-header">
-          <div>
-            <h1 class="h4 fw-bold mb-1">{{ default .Chat.Title "Chat com IA" }}</h1>
-            <p class="text-secondary mb-0">{{ if .Chat.Context }}Contexto: {{ .Chat.Context }}{{ else }}Sem contexto definido.{{ end }}</p>
-          </div>
-          <div class="d-flex gap-2">
-            <a class="btn btn-outline-secondary" href='{{ url (printf "/app/chat/%s/edit" .Chat.ID) }}'>Editar</a>
-            <button class="btn btn-outline-danger" hx-delete='{{ url (printf "/app/chat/%s" .Chat.ID) }}' hx-target="body" hx-swap="none" hx-confirm="Deseja remover este chat?">
-              Remover
-            </button>
-          </div>
+<div class="wa-app wa-app--fullchat">
+  <!-- Chat View (Full Width) -->
+  <main class="wa-main">
+    <!-- Chat Header -->
+    <header class="wa-chat-header">
+      <a href="{{ url "/app/chat" }}" class="wa-icon-btn" title="Voltar para lista">
+        <i class="bi bi-arrow-left"></i>
+      </a>
+      <div class="wa-chat-header-info">
+        <div class="wa-avatar wa-avatar--sm wa-avatar--ai">
+          <i class="bi bi-robot"></i>
         </div>
-
-        <div class="chat-shell-body">
-          <div id="messagesList" class="chat-thread" data-autoscroll>
-            {{ template "chat_messages.ejs" . }}
-          </div>
+        <div>
+          <h2 class="wa-chat-header-name">{{ default .Chat.Title "Chat com IA" }}</h2>
+          <span class="wa-chat-header-status">
+            {{ if .Chat.Context }}{{ .Chat.Context }}{{ else }}Assistente IA{{ end }}
+          </span>
         </div>
+      </div>
+      <div class="wa-chat-header-actions">
+        <a href='{{ url (printf "/app/chat/%s/edit" .Chat.ID) }}' class="wa-icon-btn" title="Editar chat">
+          <i class="bi bi-pencil"></i>
+        </a>
+        <button class="wa-icon-btn wa-icon-btn--danger" type="button"
+                hx-delete='{{ url (printf "/app/chat/%s" .Chat.ID) }}'
+                hx-target="body" hx-swap="none"
+                hx-confirm="Deseja remover este chat?"
+                title="Remover chat">
+          <i class="bi bi-trash3"></i>
+        </button>
+      </div>
+    </header>
 
-        <form hx-post='{{ url (printf "/app/chat/%s/messages" .Chat.ID) }}' 
-              hx-target="#messagesList" 
-              hx-swap="beforeend" 
-              hx-on::after-request="if(event.detail.successful) { this.reset(); this.querySelector('textarea').style.height = ''; }"
-              class="chat-input-area">
-          <div class="chat-input-wrap w-100">
-            <textarea class="form-control chat-input" 
-                      name="message" 
-                      rows="1" 
-                      placeholder="Digite sua mensagem..."
-                      required
-                      oninput="this.style.height = ''; this.style.height = this.scrollHeight + 'px'"
-                      onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); this.form.requestSubmit(); }"></textarea>
-            <button class="chat-send" type="submit">
-              <i class="bi bi-send-fill"></i>
-            </button>
+    {{ if .Alert }}
+    <div class="wa-alert wa-alert--{{ if eq (index .Alert "Type") "success" }}success{{ else }}danger{{ end }}" style="margin: 0.5rem 1rem;">
+      <i class="bi {{ if eq (index .Alert "Type") "success" }}bi-check-circle-fill{{ else }}bi-exclamation-triangle-fill{{ end }}"></i>
+      <span>{{ index .Alert "Message" }}</span>
+    </div>
+    {{ end }}
+
+    <!-- Messages Thread -->
+    <div class="wa-messages-thread" id="messagesList" data-autoscroll>
+      <div class="wa-messages-container">
+        {{ if .Messages }}
+          {{ range .Messages }}
+            <div class="wa-msg {{ if eq .Role "assistant" }}wa-msg--in{{ else }}wa-msg--out{{ end }}">
+              {{ if eq .Role "assistant" }}
+              <div class="wa-msg-avatar-inline">
+                <i class="bi bi-robot"></i>
+              </div>
+              {{ end }}
+              <div class="wa-msg-bubble">
+                <p class="wa-msg-text" style="white-space: pre-wrap;">{{ .Message }}</p>
+              </div>
+            </div>
+          {{ end }}
+        {{ else }}
+          <div class="wa-chat-empty-state">
+            <div class="wa-chat-empty-icon">
+              <i class="bi bi-chat-dots"></i>
+            </div>
+            <p>Este chat está vazio</p>
+            <span>Comece enviando uma mensagem!</span>
           </div>
-        </form>
+        {{ end }}
       </div>
     </div>
-  </main>
 
-  {{ template "scripts.ejs" . }}
+    <!-- Composer -->
+    <form hx-post='{{ url (printf "/app/chat/%s/messages" .Chat.ID) }}'
+          hx-target="#messagesList"
+          hx-swap="beforeend"
+          hx-on::after-request="if(event.detail.successful) { this.reset(); this.querySelector('textarea').style.height = ''; }"
+          class="wa-composer" id="ai-chat-form">
+      <div class="wa-composer-inner">
+        <textarea class="wa-composer-textarea"
+                  name="message"
+                  rows="1"
+                  placeholder="Digite sua mensagem..."
+                  required
+                  oninput="this.style.height = ''; this.style.height = Math.min(this.scrollHeight, 150) + 'px'"
+                  onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); this.form.requestSubmit(); }"></textarea>
+        <button class="wa-send-btn" type="submit" title="Enviar">
+          <i class="bi bi-send-fill"></i>
+        </button>
+      </div>
+    </form>
+  </main>
+</div>
+
+{{ template "scripts.ejs" . }}
 </body>
 </html>

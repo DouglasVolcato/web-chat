@@ -1,6 +1,6 @@
 {{- $version := default .cacheVersion "1" -}}
-{{- $pageTitle := default .title (default .brand "Super Template") -}}
-{{- $brandName := default .brand "Super Template" -}}
+{{- $pageTitle := default .title (default .brand "Web Chat") -}}
+{{- $brandName := default .brand "Web Chat" -}}
 <!DOCTYPE html>
 <html lang="pt-BR" data-bs-theme="dark">
   <head>
@@ -8,7 +8,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
-      content="{{ $brandName }} é um template web com login Google, área autenticada e chat com IA."
+      content="{{ $brandName }} — Mensagens seguras com expiração automática, contatos via QR Code e chat com IA."
     />
 
     <link rel="icon" type="image/x-icon" href="{{ url "/icons/favicon.svg" }}?v={{ $version }}" />

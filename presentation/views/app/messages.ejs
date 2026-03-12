@@ -1,97 +1,208 @@
-{{ template "head.ejs" (dict "title" "Mensagens" "brand" "Web Chat") }}
-<body class="bg-body d-flex flex-column min-vh-100">
-{{ template "sidebar.ejs" (dict "currentPage" "messages" "user" .User) }}
+{{ template "head.ejs" (dict "title" "Web Chat - Mensagens" "brand" "Web Chat") }}
+<body class="wa-body">
 
-<main class="app-main">
-  <section class="container-fluid py-3 px-lg-4">
-    <div class="messages-shell">
-      <aside class="messages-sidebar">
-        <div class="messages-sidebar-header">
-          <h1 class="h5 mb-1">Conversas</h1>
-          <p class="text-secondary small mb-0">Gerencie contatos no seu <a href="{{ url "/app/profile" }}">perfil</a>.</p>
+<div class="wa-app">
+  <!-- Left Panel: Chat List -->
+  <aside class="wa-sidebar" id="wa-sidebar">
+    <header class="wa-sidebar-header">
+      <div class="wa-sidebar-header-top">
+        <div class="wa-user-info">
+          <div class="wa-avatar wa-avatar--self">{{ if .User }}{{ slice .User.Name 0 1 }}{{ else }}U{{ end }}</div>
+          <span class="wa-sidebar-title">Conversas</span>
         </div>
-
-        <div class="messages-list" role="list">
-          {{ range .Chats }}
-          <a role="listitem" class="messages-chat-item {{ if eq .ChatID $.ActiveChatID }}active{{ end }}" href="{{ url (print "/app/messages/" .ChatID) }}">
-            <div class="messages-chat-avatar">{{ if gt (len .ContactName) 0 }}{{ slice .ContactName 0 1 }}{{ else }}?{{ end }}</div>
-            <div class="messages-chat-content">
-              <div class="messages-chat-top">
-                <strong class="messages-chat-name">{{ .ContactName }}</strong>
-              </div>
-              <p class="messages-chat-preview mb-0">{{ if .HasLastMessage }}{{ .LastMessage }}{{ else }}Sem mensagens ainda{{ end }}</p>
-            </div>
+        <div class="wa-sidebar-actions">
+          <a href="{{ url "/app/profile" }}" class="wa-icon-btn" title="Configurações" id="settings-btn">
+            <i class="bi bi-gear"></i>
           </a>
-          {{ else }}
-          <div class="p-3 text-secondary">Sem chats ativos. Adicione um contato pelo QR no perfil.</div>
-          {{ end }}
+          <button class="wa-icon-btn d-lg-none" type="button" id="close-sidebar-btn" title="Fechar">
+            <i class="bi bi-x-lg"></i>
+          </button>
         </div>
-      </aside>
+      </div>
+      <div class="wa-search-bar">
+        <i class="bi bi-search"></i>
+        <input type="text" id="chat-search" class="wa-search-input" placeholder="Pesquisar ou começar uma nova conversa" autocomplete="off">
+      </div>
+    </header>
 
-      <section class="messages-main">
-        <header class="messages-main-header">
-          <div>
-            <h2 class="h6 mb-0">{{ if .Messages }}Conversa{{ else }}Selecione uma conversa{{ end }}</h2>
+    <div class="wa-chat-list" id="chat-list" role="list">
+      {{ range .Chats }}
+      <a role="listitem" 
+         class="wa-chat-item {{ if eq .ChatID $.ActiveChatID }}active{{ end }}" 
+         href="{{ url (print "/app/messages/" .ChatID) }}"
+         data-contact-name="{{ .ContactName }}">
+        <div class="wa-avatar">{{ if gt (len .ContactName) 0 }}{{ slice .ContactName 0 1 }}{{ else }}?{{ end }}</div>
+        <div class="wa-chat-item-content">
+          <div class="wa-chat-item-top">
+            <strong class="wa-chat-item-name">{{ .ContactName }}</strong>
+            {{ if .HasLastMessage }}
+            <span class="wa-chat-item-time">{{ .LastMessageAt.Format "15:04" }}</span>
+            {{ end }}
           </div>
-          <button id="enable-push" class="btn btn-outline-secondary btn-sm" type="button">Ativar push</button>
-        </header>
-
-        <div class="messages-thread" id="messages-thread">
-          {{ range .Messages }}
-          <div class="message-row {{ if eq .SenderID $.User.ID }}outgoing{{ else }}incoming{{ end }}">
-            <article class="message-bubble">
-              <p class="mb-1">{{ .Content }}</p>
-              <small class="message-author">{{ .SenderDisplay }}</small>
-            </article>
-          </div>
-          {{ else }}
-          <div class="empty-chat-state">
-            <i class="bi bi-chat-square-text"></i>
-            <p class="mb-0 text-secondary">Escolha um chat para iniciar a conversa.</p>
-          </div>
-          {{ end }}
+          <p class="wa-chat-item-preview">{{ if .HasLastMessage }}{{ .LastMessage }}{{ else }}<i class="bi bi-chat-dots"></i> Sem mensagens ainda{{ end }}</p>
         </div>
+      </a>
+      {{ else }}
+      <div class="wa-empty-list">
+        <div class="wa-empty-list-icon">
+          <i class="bi bi-people"></i>
+        </div>
+        <p>Nenhum chat ativo</p>
+        <span class="text-secondary">Adicione contatos pelo <a href="{{ url "/app/profile" }}">perfil</a> usando o QR Code.</span>
+      </div>
+      {{ end }}
+    </div>
+  </aside>
 
-        {{ if .ActiveChatID }}
-        <form method="post" action="{{ url "/app/messages/send" }}" class="messages-composer">
-          <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
-          {{ range .Chats }}{{ if eq .ChatID $.ActiveChatID }}<input type="hidden" name="target_user_id" value="{{ .ContactUserID }}">{{ end }}{{ end }}
-          <input class="form-control" maxlength="2000" type="text" name="content" placeholder="Digite sua mensagem" required>
-          <button class="btn btn-success" type="submit"><i class="bi bi-send-fill"></i></button>
-        </form>
-        {{ else }}
-        <div class="messages-composer disabled">
-          <input class="form-control" type="text" placeholder="Selecione um chat para enviar mensagens" disabled>
-          <button class="btn btn-success" type="button" disabled><i class="bi bi-send-fill"></i></button>
+  <!-- Right Panel: Active Chat or Welcome -->
+  <main class="wa-main">
+    <!-- Mobile Toggle -->
+    <button class="wa-mobile-toggle d-lg-none" type="button" id="open-sidebar-btn">
+      <i class="bi bi-list"></i>
+    </button>
+
+    {{ if .ActiveChatID }}
+    <!-- Chat Header -->
+    <header class="wa-chat-header">
+      <button class="wa-icon-btn d-lg-none" type="button" id="back-to-list-btn">
+        <i class="bi bi-arrow-left"></i>
+      </button>
+      <div class="wa-chat-header-info">
+        {{ range .Chats }}{{ if eq .ChatID $.ActiveChatID }}
+        <div class="wa-avatar wa-avatar--sm">{{ if gt (len .ContactName) 0 }}{{ slice .ContactName 0 1 }}{{ else }}?{{ end }}</div>
+        <div>
+          <h2 class="wa-chat-header-name">{{ .ContactName }}</h2>
+          <span class="wa-chat-header-status">online</span>
+        </div>
+        {{ end }}{{ end }}
+      </div>
+      <div class="wa-chat-header-actions">
+        <button class="wa-icon-btn" type="button" id="enable-push" title="Ativar notificações">
+          <i class="bi bi-bell"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Messages Thread -->
+    <div class="wa-messages-thread" id="messages-thread">
+      <div class="wa-messages-container">
+        {{ range .Messages }}
+        <div class="wa-msg {{ if eq .SenderUserID $.User.ID }}wa-msg--out{{ else }}wa-msg--in{{ end }}">
+          <div class="wa-msg-bubble">
+            <p class="wa-msg-text">{{ .Content }}</p>
+            <span class="wa-msg-meta">
+              {{ .SenderDisplay }}
+              {{ if eq .SenderUserID $.User.ID }}<i class="bi bi-check2-all"></i>{{ end }}
+            </span>
+          </div>
         </div>
         {{ end }}
-
-        <small class="text-secondary px-3 pb-2" id="push-status">Permita notificações para receber mensagens.</small>
-      </section>
+      </div>
     </div>
-  </section>
-</main>
+
+    <!-- Composer -->
+    <form method="post" action="{{ url "/app/messages/send" }}" class="wa-composer" id="message-form">
+      <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+      {{ range .Chats }}{{ if eq .ChatID $.ActiveChatID }}<input type="hidden" name="target_user_id" value="{{ .ContactUserID }}">{{ end }}{{ end }}
+      <div class="wa-composer-inner">
+        <button class="wa-icon-btn wa-emoji-btn" type="button" title="Emoji">
+          <i class="bi bi-emoji-smile"></i>
+        </button>
+        <input class="wa-composer-input" maxlength="2000" type="text" name="content" placeholder="Mensagem" required autocomplete="off" id="message-input">
+        <button class="wa-send-btn" type="submit" title="Enviar">
+          <i class="bi bi-send-fill"></i>
+        </button>
+      </div>
+    </form>
+
+    <small class="wa-push-status" id="push-status"></small>
+
+    {{ else }}
+    <!-- Welcome Screen -->
+    <div class="wa-welcome">
+      <div class="wa-welcome-inner">
+        <div class="wa-welcome-icon">
+          <i class="bi bi-chat-square-heart"></i>
+        </div>
+        <h2 class="wa-welcome-title">Web Chat</h2>
+        <p class="wa-welcome-text">Envie e receba mensagens com segurança.<br>Selecione uma conversa para começar.</p>
+        <div class="wa-welcome-features">
+          <div class="wa-welcome-feature">
+            <i class="bi bi-shield-lock"></i>
+            <span>Mensagens que expiram em 24h</span>
+          </div>
+          <div class="wa-welcome-feature">
+            <i class="bi bi-qr-code"></i>
+            <span>Conecte-se via QR Code</span>
+          </div>
+          <div class="wa-welcome-feature">
+            <i class="bi bi-bell"></i>
+            <span>Notificações push</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    {{ end }}
+  </main>
+</div>
 
 <script>
+  // Scroll to bottom of messages
   const threadEl = document.getElementById('messages-thread');
   if (threadEl) threadEl.scrollTop = threadEl.scrollHeight;
 
+  // Chat search filter
+  const searchInput = document.getElementById('chat-search');
+  if (searchInput) {
+    searchInput.addEventListener('input', () => {
+      const q = searchInput.value.toLowerCase();
+      document.querySelectorAll('.wa-chat-item').forEach(item => {
+        const name = (item.dataset.contactName || '').toLowerCase();
+        item.style.display = name.includes(q) ? '' : 'none';
+      });
+    });
+  }
+
+  // Mobile sidebar toggle
+  const sidebar = document.getElementById('wa-sidebar');
+  document.getElementById('open-sidebar-btn')?.addEventListener('click', () => sidebar?.classList.add('show'));
+  document.getElementById('close-sidebar-btn')?.addEventListener('click', () => sidebar?.classList.remove('show'));
+  document.getElementById('back-to-list-btn')?.addEventListener('click', () => sidebar?.classList.add('show'));
+
+  // Auto-hide sidebar on mobile when chat is active
+  {{ if .ActiveChatID }}
+  if (window.innerWidth < 992 && sidebar) sidebar.classList.remove('show');
+  {{ end }}
+
+  // Send with Enter
+  const msgInput = document.getElementById('message-input');
+  if (msgInput) {
+    msgInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        document.getElementById('message-form')?.requestSubmit();
+      }
+    });
+    msgInput.focus();
+  }
+
+  // Push notifications
   async function enablePush() {
     const status = document.getElementById('push-status');
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-      status.textContent = 'Push não suportado neste navegador.';
+      if (status) status.textContent = 'Push não suportado neste navegador.';
       return;
     }
 
     const vapidPublicKey = '{{ .VAPIDPublicKey }}';
     if (!vapidPublicKey) {
-      status.textContent = 'Push ainda não configurado no servidor.';
+      if (status) status.textContent = 'Push ainda não configurado.';
       return;
     }
 
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') {
-      status.textContent = 'Permissão de notificação negada.';
+      if (status) status.textContent = 'Permissão negada.';
       return;
     }
 
@@ -110,7 +221,7 @@
       body: JSON.stringify(sub)
     });
 
-    status.textContent = save.ok ? 'Push ativado com sucesso.' : 'Falha ao salvar push.';
+    if (status) status.textContent = save.ok ? 'Notificações ativadas ✓' : 'Falha ao ativar notificações.';
   }
 
   document.getElementById('enable-push')?.addEventListener('click', enablePush);
