@@ -8,11 +8,20 @@
               <div class="card-body p-4">
                 <div class="text-center mb-4">
                   <img src="{{ url "/icons/logo.png" }}" alt="Logo" width="48" height="48" class="mb-2">
-                  <h1 class="h4 fw-bold mb-1">Entrar no Super Template</h1>
-                  <p class="text-secondary">Faça login para acessar sua área segura e conversar com a IA.</p>
+                  <h1 class="h4 fw-bold mb-1">Entrar no Web Chat Privado</h1>
+                  <p class="text-secondary">Faça login para acessar sua área segura e somente após instalar o app (PWA).</p>
                 </div>
 
-                <div id="google-button-wrapper" class="d-flex justify-content-center mb-3">
+
+                <div id="install-required" class="alert alert-warning" role="alert">
+                  <strong>Instalação obrigatória:</strong> instale o app para liberar o login.
+                  <div class="mt-2 d-flex gap-2">
+                    <button id="install-app-btn" type="button" class="btn btn-sm btn-dark">Instalar app</button>
+                    <span id="install-status" class="small text-secondary align-self-center">Aguardando instalação…</span>
+                  </div>
+                </div>
+
+                <div id="google-button-wrapper" class="d-flex justify-content-center mb-3 d-none">
                   <div id="google-btn"></div>
                 </div>
 
@@ -38,8 +47,16 @@
       const form = document.getElementById("google-auth-form");
       const credentialInput = document.getElementById("google-credential-input");
       const clientId = "{{ .GoogleClientID }}";
+      const installBtn = document.getElementById("install-app-btn");
+      const installRequired = document.getElementById("install-required");
+      const installStatus = document.getElementById("install-status");
+      let deferredPrompt = null;
 
       function initGoogle() {
+        if (!checkInstalled()) {
+          return;
+        }
+
         if (!clientId) {
           return;
         }
@@ -71,6 +88,44 @@
       }
 
       initGoogle();
+
+      function enableLogin() {
+        if (installRequired) installRequired.classList.add("d-none");
+        document.getElementById("google-button-wrapper")?.classList.remove("d-none");
+      }
+
+      function checkInstalled() {
+        const standalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+        if (standalone || localStorage.getItem("pwaInstalled") === "1") {
+          enableLogin();
+          return true;
+        }
+        return false;
+      }
+
+      window.addEventListener("beforeinstallprompt", (event) => {
+        event.preventDefault();
+        deferredPrompt = event;
+        installStatus.textContent = "Pronto para instalar.";
+      });
+
+      window.addEventListener("appinstalled", () => {
+        localStorage.setItem("pwaInstalled", "1");
+        installStatus.textContent = "App instalado. Login liberado.";
+        enableLogin();
+      });
+
+      installBtn?.addEventListener("click", async () => {
+        if (!deferredPrompt) {
+          installStatus.textContent = "Use o menu do navegador e clique em 'Instalar aplicativo'.";
+          return;
+        }
+        deferredPrompt.prompt();
+        await deferredPrompt.userChoice;
+      });
+
+      checkInstalled();
+
     </script>
   </body>
 </html>
