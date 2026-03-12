@@ -71,6 +71,7 @@ func (app *App) router() http.Handler {
 
 	mux.Use(middleware.RequestID)
 	mux.Use(app.tracingMiddleware)
+	mux.Use(middleware.RedirectSlashes)
 	mux.Use(httprate.LimitByIP(70, time.Minute))
 	mux.Use(cors.Handler(config))
 
@@ -115,6 +116,10 @@ func (app *App) router() http.Handler {
 	}
 
 	if basePath != "" {
+		mux.Get(basePath, func(w http.ResponseWriter, r *http.Request) {
+			http.Redirect(w, r, helpers.PathURL("/"), http.StatusPermanentRedirect)
+		})
+
 		mux.Route(basePath, func(r chi.Router) {
 			registerAppRoutes(r)
 		})
