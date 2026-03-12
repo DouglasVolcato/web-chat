@@ -1,6 +1,6 @@
 {{- $version := default .cacheVersion "1" -}}
-{{- $pageTitle := default .title (default .brand "Super Template") -}}
-{{- $brandName := default .brand "Super Template" -}}
+{{- $pageTitle := default .title (default .brand "Web Chat") -}}
+{{- $brandName := default .brand "Web Chat" -}}
 <!DOCTYPE html>
 <html lang="pt-BR" data-bs-theme="dark">
   <head>
@@ -16,6 +16,7 @@
     <link rel="stylesheet" href="{{ url "/css/bootstrap.min.css" }}?v={{ $version }}" />
     <link rel="stylesheet" href="{{ url "/css/bootstrap-icons.min.css" }}?v={{ $version }}" />
     <link rel="stylesheet" href="{{ url "/css/style.css" }}?v={{ $version }}" />
+    <link rel="manifest" href="{{ url "/manifest.json" }}" />
     <meta name="theme-color" content="#0f766e" />
 
     <script src="{{ url "/js/htmx.min.js" }}?v={{ $version }}" defer></script>

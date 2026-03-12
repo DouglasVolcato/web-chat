@@ -1,21 +1,22 @@
 {
-  "name": "Chat Web",
-  "short_name": "Chat Web",
-  "description": "Template web com login Google, área autenticada e chat com IA.",
-  "start_url": "./",
-  "scope": "./",
+  "name": "Web Chat",
+  "short_name": "Web Chat",
+  "description": "Mensagens seguras com expiração automática e chat com IA.",
+  "start_url": "/login",
+  "scope": "/",
   "display": "standalone",
-  "background_color": "#0d1117",
-  "theme_color": "#6366f1",
+  "background_color": "#020617",
+  "theme_color": "#0f766e",
   "icons": [
     {
-      "src": "./icons/favicon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml"
+      "src": "/icons/logo.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
-      "src": "./icons/logo.png",
-      "sizes": "192x192",
+      "src": "/icons/logo.png",
+      "sizes": "512x512",
       "type": "image/png"
     }
   ]

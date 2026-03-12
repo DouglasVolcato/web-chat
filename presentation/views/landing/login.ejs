@@ -1,4 +1,4 @@
-{{ template "head-landing.ejs" (dict "title" "Super Template - Login" "brand" "Super Template") }}
+{{ template "head-landing.ejs" (dict "title" "Web Chat - Login" "brand" "Web Chat") }}
   <body class="bg-body-secondary">
     <main class="min-vh-100 d-flex align-items-center justify-content-center py-5">
       <div class="container">
@@ -88,21 +88,7 @@
       }
 
       function refreshInstallGate() {
-        const isStandalone = isStandaloneMode();
-        const mobile = isMobile();
-
-        // On desktop, we don't force installation
-        if (!mobile) {
-          setInstallAllowed();
-          // Keep the install button visible but optional if available
-          if (deferredPrompt) {
-            installRequired?.classList.remove("d-none");
-            installStatus.textContent = "Dica: Você pode instalar como aplicativo para acesso rápido.";
-          }
-          return true;
-        }
-
-        if (isStandalone) {
+        if (isStandaloneMode()) {
           setInstallAllowed();
           return true;
         }
@@ -158,7 +144,8 @@
       window.addEventListener("appinstalled", () => {
         deferredPrompt = null;
         setInstallAllowed();
-        initGoogle();
+        // Delay slightly to ensure browser state is synced
+        setTimeout(initGoogle, 500);
       });
 
       installBtn?.addEventListener("click", async () => {

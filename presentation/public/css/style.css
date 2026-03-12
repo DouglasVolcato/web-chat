@@ -2177,7 +2177,7 @@ footer.app-footer {
    =================================================================== */
 
 .wa-settings-wrapper {
-    max-width: 800px;
+    max-width: 1000px;
     margin: 0 auto;
     height: 100vh;
     height: 100dvh;
@@ -2185,7 +2185,24 @@ footer.app-footer {
     background: var(--sf-bg-surface);
     border-left: 1px solid var(--sf-border);
     border-right: 1px solid var(--sf-border);
-    -webkit-overflow-scrolling: touch;
+}
+
+@media (min-width: 992px) {
+    .wa-settings-content {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1.5rem;
+        padding: 1.5rem;
+    }
+    .wa-settings-section {
+        border-radius: var(--sf-radius-lg);
+        border: 1px solid var(--sf-border);
+        background: var(--sf-bg-surface);
+        margin-bottom: 0;
+    }
+    .wa-settings-section:first-child {
+        grid-column: span 2;
+    }
 }
 
 @media (max-width: 767.98px) {

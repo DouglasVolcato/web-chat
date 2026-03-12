@@ -168,9 +168,9 @@
   document.getElementById('back-to-list-btn')?.addEventListener('click', () => sidebar?.classList.add('show'));
 
   // Auto-hide sidebar on mobile when chat is active
-  {{ if .ActiveChatID }}
-  if (window.innerWidth < 992 && sidebar) sidebar.classList.remove('show');
-  {{ end }}
+  if ("{{ .ActiveChatID }}" !== "" && window.innerWidth < 992 && sidebar) {
+    sidebar.classList.remove('show');
+  }
 
   // Send with Enter
   const msgInput = document.getElementById('message-input');
