@@ -80,17 +80,20 @@ func (app *App) router() http.Handler {
 	mux.Handle(helpers.PathURL("/metrics"), promhttp.HandlerFor(metricsRegistry, promhttp.HandlerOpts{}))
 
 	fileServer := http.FileServer(http.Dir("presentation/public"))
-	stripPrefix := "/"
-	if basePath != "" {
-		stripPrefix = basePath + "/"
+	registerStaticRoutes := func(router chi.Router, routePrefix string, stripPrefix string) {
+		router.Handle(routePrefix+"/css/*", http.StripPrefix(stripPrefix, fileServer))
+		router.Handle(routePrefix+"/js/*", http.StripPrefix(stripPrefix, fileServer))
+		router.Handle(routePrefix+"/icons/*", http.StripPrefix(stripPrefix, fileServer))
+		router.Handle(routePrefix+"/robots.txt", http.StripPrefix(stripPrefix, fileServer))
+		router.Handle(routePrefix+"/sitemap.xml", http.StripPrefix(stripPrefix, fileServer))
+		router.Handle(routePrefix+"/manifest.json", http.StripPrefix(stripPrefix, fileServer))
+		router.Handle(routePrefix+"/sw.js", http.StripPrefix(stripPrefix, fileServer))
 	}
-	mux.Handle(helpers.PathURL("/css/*"), http.StripPrefix(stripPrefix, fileServer))
-	mux.Handle(helpers.PathURL("/js/*"), http.StripPrefix(stripPrefix, fileServer))
-	mux.Handle(helpers.PathURL("/icons/*"), http.StripPrefix(stripPrefix, fileServer))
-	mux.Handle(helpers.PathURL("/robots.txt"), http.StripPrefix(stripPrefix, fileServer))
-	mux.Handle(helpers.PathURL("/sitemap.xml"), http.StripPrefix(stripPrefix, fileServer))
-	mux.Handle(helpers.PathURL("/manifest.json"), http.StripPrefix(stripPrefix, fileServer))
-	mux.Handle(helpers.PathURL("/sw.js"), http.StripPrefix(stripPrefix, fileServer))
+
+	registerStaticRoutes(mux, "", "/")
+	if basePath != "" {
+		registerStaticRoutes(mux, basePath, basePath+"/")
+	}
 
 	registerAppRoutes := func(router chi.Router) {
 		indexController := controllers.IndexController{}
@@ -115,12 +118,11 @@ func (app *App) router() http.Handler {
 		profileHandler.RegisterRoutes(router)
 	}
 
+	registerAppRoutes(mux)
 	if basePath != "" {
 		mux.Route(basePath, func(r chi.Router) {
 			registerAppRoutes(r)
 		})
-	} else {
-		registerAppRoutes(mux)
 	}
 
 	// Payment Module
