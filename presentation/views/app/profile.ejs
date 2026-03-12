@@ -90,13 +90,10 @@
 
       <!-- Scanner Panel -->
       <div id="scan-panel" class="wa-scan-panel d-none">
-        <div class="wa-scan-viewport">
-          <video id="qr-video" autoplay playsinline muted></video>
-          <div class="wa-scan-overlay">
-            <div class="wa-scan-frame"></div>
-          </div>
+        <div class="wa-scan-viewport" style="background: #000; border-radius: var(--sf-radius-md); overflow: hidden;">
+          <div id="qr-reader" style="width: 100%; min-height: 250px;"></div>
         </div>
-        <div class="wa-scan-controls">
+        <div class="wa-scan-controls" style="margin-top: 1rem;">
           <small id="scan-status" class="wa-scan-status">Posicione o QR Code dentro do quadro.</small>
           <button type="button" class="wa-btn wa-btn--ghost wa-btn--sm" id="stop-scan-btn">
             <i class="bi bi-x-lg"></i> Parar câmera
@@ -150,45 +147,21 @@
   </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 <script>
-  // QR Code generation using canvas (no external API dependency)
+  // QR Code generation using qrcode.js
   function drawQRCode(canvas, data) {
-    const ctx = canvas.getContext('2d');
-    const size = canvas.width;
-    ctx.clearRect(0, 0, size, size);
-    
-    // We'll use a more robust approach with a compact QR drawing library
-    // Since we can't import npm modules easily, we'll use a simpler encoded approach
-    // Generate QR via a mini encoder or external API as fallback
-    const img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = function() {
-      // Draw white background with rounded corners
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, size, size);
-      
-      // Draw QR code image centered
-      const padding = 20;
-      ctx.drawImage(img, padding, padding, size - padding*2, size - padding*2);
-      
-      // Add gradient border
-      ctx.strokeStyle = '#0f766e';
-      ctx.lineWidth = 3;
-      ctx.strokeRect(1.5, 1.5, size - 3, size - 3);
-    };
-    img.onerror = function() {
-      // Fallback: show the token as text
-      ctx.fillStyle = '#f6f3ef';
-      ctx.fillRect(0, 0, size, size);
-      ctx.fillStyle = '#1f2937';
-      ctx.font = 'bold 14px "Space Grotesk", sans-serif';
-      ctx.textAlign = 'center';
-      ctx.fillText('QR Code', size/2, size/2 - 10);
-      ctx.font = '10px "Space Grotesk", sans-serif';
-      const truncated = data.length > 30 ? data.substring(0,30) + '...' : data;
-      ctx.fillText(truncated, size/2, size/2 + 15);
-    };
-    img.src = `https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=0&data=${encodeURIComponent(data)}`;
+    QRCode.toCanvas(canvas, data, {
+      width: canvas.width,
+      margin: 2,
+      color: {
+        dark: '#0f766e',
+        light: '#ffffff'
+      }
+    }, function (error) {
+      if (error) console.error(error);
+    });
   }
 
   const qrPanel = document.getElementById('qr-panel');
@@ -242,49 +215,37 @@
   });
 
   // QR Scanner
-  let scannerStream;
-  let scannerTimer;
+  let html5QrCode;
 
   async function startScanner() {
     const scanPanel = document.getElementById('scan-panel');
-    const video = document.getElementById('qr-video');
     const status = document.getElementById('scan-status');
     scanPanel.classList.remove('d-none');
-
-    // Try BarcodeDetector first, fallback to jsQR if available
-    const hasBarcodeDetector = 'BarcodeDetector' in window;
-
-    if (!hasBarcodeDetector) {
-      status.textContent = 'Leitor por câmera não suportado. Cole o token manualmente.';
-      status.classList.add('wa-scan-status--error');
-      return;
+    
+    if (!html5QrCode) {
+      html5QrCode = new Html5Qrcode("qr-reader");
     }
 
     try {
-      scannerStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-      video.srcObject = scannerStream;
-      const detector = new BarcodeDetector({ formats: ['qr_code'] });
       status.textContent = 'Apontando para o QR Code...';
       status.classList.remove('wa-scan-status--error');
-
-      const loop = async () => {
-        if (!video.videoWidth) return;
-        try {
-          const codes = await detector.detect(video);
-          if (codes?.[0]?.rawValue) {
-            const rawToken = codes[0].rawValue.trim();
-            tokenInput.value = rawToken;
-            status.textContent = '✓ QR Code lido com sucesso!';
-            status.classList.add('wa-scan-status--success');
-            stopScanner();
-            
-            // Auto-focus the add button
-            tokenInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }
-        } catch(e) { /* ignore detection errors */ }
-      };
-
-      scannerTimer = setInterval(loop, 400);
+      
+      await html5QrCode.start(
+        { facingMode: "environment" },
+        { fps: 10, qrbox: { width: 200, height: 200 } },
+        (decodedText, decodedResult) => {
+          // Success
+          tokenInput.value = decodedText;
+          status.textContent = '✓ QR Code lido com sucesso!';
+          status.classList.add('wa-scan-status--success');
+          stopScanner();
+          // Auto-focus the add button
+          tokenInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        },
+        (errorMessage) => {
+          // Parse error, ignore to keep scanning
+        }
+      );
     } catch (err) {
       status.textContent = 'Não foi possível acessar a câmera. Verifique as permissões.';
       status.classList.add('wa-scan-status--error');
@@ -292,10 +253,9 @@
   }
 
   function stopScanner() {
-    if (scannerTimer) clearInterval(scannerTimer);
-    if (scannerStream) scannerStream.getTracks().forEach(t => t.stop());
-    scannerTimer = null;
-    scannerStream = null;
+    if (html5QrCode && html5QrCode.isScanning) {
+      html5QrCode.stop().then(ignore => {}).catch(err => {});
+    }
   }
 
   window.addEventListener('beforeunload', stopScanner);
