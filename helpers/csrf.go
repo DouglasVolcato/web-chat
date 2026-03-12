@@ -42,6 +42,9 @@ func ValidateCSRFToken(r *http.Request) bool {
 	}
 
 	formToken := strings.TrimSpace(r.FormValue("csrf_token"))
+	if formToken == "" {
+		formToken = strings.TrimSpace(r.Header.Get("X-CSRF-Token"))
+	}
 	cookieToken := strings.TrimSpace(cookie.Value)
 	if formToken == "" || cookieToken == "" {
 		return false

@@ -3,6 +3,7 @@ package main
 import (
 	"app/helpers"
 	"bytes"
+	"context"
 	"fmt"
 	"io"
 	"log"
@@ -13,6 +14,8 @@ import (
 	"time"
 
 	"app/controllers"
+	"app/models"
+	"app/modules/mvpchat"
 	"app/modules/profile"
 	"app/observability"
 	"app/payments"
@@ -79,6 +82,18 @@ func (app *App) router() http.Handler {
 
 	mux.Handle(helpers.PathURL("/metrics"), promhttp.HandlerFor(metricsRegistry, promhttp.HandlerOpts{}))
 
+	mux.Get(helpers.PathURL("/healthz"), func(w http.ResponseWriter, r *http.Request) {
+		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
+		defer cancel()
+		if models.DB == nil || models.DB.PingContext(ctx) != nil {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_, _ = w.Write([]byte(`{"status":"down"}`))
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"status":"ok"}`))
+	})
+
 	fileServer := http.FileServer(http.Dir("presentation/public"))
 	registerStaticRoutes := func(router chi.Router, routePrefix string, stripPrefix string) {
 		router.Handle(routePrefix+"/css/*", http.StripPrefix(stripPrefix, fileServer))
@@ -116,6 +131,9 @@ func (app *App) router() http.Handler {
 
 		profileHandler := profile.NewHandler(profile.NewService(profile.NewPostgresRepository()))
 		profileHandler.RegisterRoutes(router)
+
+		chatMVPHandler := mvpchat.NewHandler(mvpchat.NewService(mvpchat.NewPostgresRepository(), mvpchat.NewWebPushNotifierFromEnv()))
+		chatMVPHandler.RegisterRoutes(router)
 	}
 
 	registerAppRoutes(mux)

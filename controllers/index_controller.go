@@ -24,7 +24,7 @@ func (c *IndexController) RegisterRoutes(router chi.Router) {
 		r.Use(httprate.LimitByIP(30, time.Minute))
 
 		r.Get("/", func(w http.ResponseWriter, r *http.Request) {
-			RenderTemplate(w, filepath.Join("landing", "index.ejs"), nil)
+			helpers.Redirect(w, r, "/login")
 		})
 
 		r.Get("/termos", func(w http.ResponseWriter, r *http.Request) {
@@ -37,7 +37,7 @@ func (c *IndexController) RegisterRoutes(router chi.Router) {
 
 		r.Get("/login", func(w http.ResponseWriter, r *http.Request) {
 			if userID, err := helpers.ResolveUserIDFromRequest(r); err == nil && userID != "" {
-				helpers.Redirect(w, r, "/app/dashboard")
+				helpers.Redirect(w, r, "/app/messages")
 				return
 			}
 
@@ -130,7 +130,7 @@ func (c *IndexController) RegisterRoutes(router chi.Router) {
 				return
 			}
 
-			helpers.Redirect(w, r, "/app/dashboard")
+			helpers.Redirect(w, r, "/app/messages")
 
 			RenderTemplate(w, filepath.Join("partials", "alert.ejs"), map[string]any{
 				"Type":    "success",
