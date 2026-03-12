@@ -1,0 +1,56 @@
+{{ template "head.ejs" (dict "title" "Super Template - Chat" "brand" "Super Template") }}
+
+<body class="bg-body d-flex flex-column min-vh-100">
+  {{ template "sidebar.ejs" (dict "currentPage" "chat" "user" .User) }}
+
+  <main class="app-main">
+    <div class="container-xl py-4">
+      {{ if .Alert }}
+      {{ template "alert.ejs" .Alert }}
+      {{ end }}
+
+      <div class="chat-shell">
+        <div class="chat-shell-header">
+          <div>
+            <h1 class="h4 fw-bold mb-1">{{ default .Chat.Title "Chat com IA" }}</h1>
+            <p class="text-secondary mb-0">{{ if .Chat.Context }}Contexto: {{ .Chat.Context }}{{ else }}Sem contexto definido.{{ end }}</p>
+          </div>
+          <div class="d-flex gap-2">
+            <a class="btn btn-outline-secondary" href="/app/chat/{{ .Chat.ID }}/edit">Editar</a>
+            <button class="btn btn-outline-danger" hx-delete="/app/chat/{{ .Chat.ID }}" hx-target="body" hx-swap="none" hx-confirm="Deseja remover este chat?">
+              Remover
+            </button>
+          </div>
+        </div>
+
+        <div class="chat-shell-body">
+          <div id="messagesList" class="chat-thread" data-autoscroll>
+            {{ template "chat_messages.ejs" . }}
+          </div>
+        </div>
+
+        <form hx-post="/app/chat/{{ .Chat.ID }}/messages" 
+              hx-target="#messagesList" 
+              hx-swap="beforeend" 
+              hx-on::after-request="if(event.detail.successful) { this.reset(); this.querySelector('textarea').style.height = ''; }"
+              class="chat-input-area">
+          <div class="chat-input-wrap w-100">
+            <textarea class="form-control chat-input" 
+                      name="message" 
+                      rows="1" 
+                      placeholder="Digite sua mensagem..."
+                      required
+                      oninput="this.style.height = ''; this.style.height = this.scrollHeight + 'px'"
+                      onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); this.form.requestSubmit(); }"></textarea>
+            <button class="chat-send" type="submit">
+              <i class="bi bi-send-fill"></i>
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </main>
+
+  {{ template "scripts.ejs" . }}
+</body>
+</html>

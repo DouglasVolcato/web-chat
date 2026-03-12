@@ -1,0 +1,56 @@
+{{ template "head.ejs" (dict "title" "Super Template - Chats" "brand" "Super Template") }}
+
+<body class="bg-body d-flex flex-column min-vh-100">
+  {{ template "sidebar.ejs" (dict "currentPage" "chat" "user" .User) }}
+
+  <main class="app-main">
+    <div class="container-xl py-4">
+      <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4">
+        <div>
+          <h1 class="fw-bold mb-1">Chats</h1>
+          <p class="text-secondary mb-0">Acompanhe suas conversas com a IA.</p>
+        </div>
+        <a class="btn btn-primary" href="/app/chat/new">
+          <i class="bi bi-plus-lg"></i> Novo chat
+        </a>
+      </div>
+
+      {{ if .Alert }}
+      {{ template "alert.ejs" .Alert }}
+      {{ end }}
+
+      <div class="card chat-list-card">
+        <div class="card-body">
+          {{ if .Chats }}
+            <div class="d-flex flex-column">
+              {{ range .Chats }}
+                <div class="chat-list-item">
+                  <div class="chat-list-meta">
+                    <div class="chat-list-avatar">
+                      <i class="bi bi-chat-dots"></i>
+                    </div>
+                    <div class="chat-list-content">
+                      <a class="chat-list-title" href="/app/chat/{{ .ID }}">{{ default .Title "Chat" }}</a>
+                      <div class="chat-list-subtitle">Atualizado em {{ .UpdatedAt.Format "02/01/2006" }}</div>
+                    </div>
+                  </div>
+                  <div class="chat-list-actions">
+                    <a class="btn btn-sm btn-outline-secondary" href="/app/chat/{{ .ID }}">Abrir</a>
+                    <button class="btn btn-sm btn-outline-danger" type="button" hx-delete="/app/chat/{{ .ID }}" hx-target="body" hx-swap="none" hx-confirm="Deseja remover este chat?" aria-label="Remover chat">
+                      <i class="bi bi-trash"></i>
+                    </button>
+                  </div>
+                </div>
+              {{ end }}
+            </div>
+          {{ else }}
+            <p class="text-secondary">Você ainda não criou nenhum chat.</p>
+          {{ end }}
+        </div>
+      </div>
+    </div>
+  </main>
+
+  {{ template "scripts.ejs" . }}
+</body>
+</html>

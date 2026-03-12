@@ -1,0 +1,19 @@
+{{ if .Messages }}
+  {{ range .Messages }}
+    <div class="chat-message {{ if eq .Role "assistant" }}is-assistant{{ else }}is-user{{ end }}">
+      {{ if eq .Role "assistant" }}
+        <div class="chat-avatar">
+          <i class="bi bi-robot"></i>
+        </div>
+      {{ end }}
+      <div class="chat-bubble">
+        <div class="chat-text" style="white-space: pre-wrap;">{{ .Message }}</div>
+      </div>
+    </div>
+  {{ end }}
+{{ else }}
+  <div class="chat-empty">
+    <i class="bi bi-chat-dots fs-1 d-block mb-3 opacity-25"></i>
+    <p class="mb-0">Este chat está vazio. Comece enviando uma mensagem!</p>
+  </div>
+{{ end }}

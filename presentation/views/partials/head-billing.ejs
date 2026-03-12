@@ -1,0 +1,87 @@
+{{- $version := default .cacheVersion "1" -}}
+{{- $pageTitle := default .title (default .brand "SUPER TEMPLATE") -}}
+<!DOCTYPE html>
+<html lang="pt-BR" data-bs-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Super Template é a plataforma de comunicação assistida por IA para responder melhor, treinar conversas e criar textos que convertem."
+    />
+
+    <link rel="canonical" href="https://superfala.com/" />
+
+    <meta property="og:title" content="Super Template" />
+    <meta
+      property="og:description"
+      content="Sugestões de respostas, simulador emocional, escrita assistida e treinos para falar melhor em qualquer situação."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://superfala.com/" />
+    <meta property="og:image" content="/icons/favicon.svg?v={{ $version }}" />
+    <meta property="og:locale" content="pt_BR" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Super Template" />
+    <meta
+      name="twitter:description"
+      content="Respostas inteligentes, escrita assistida e feedback emocional para namoro, vendas e marketing."
+    />
+    <meta name="twitter:image" content="/icons/favicon.svg?v={{ $version }}" />
+
+    <link rel="icon" type="image/x-icon" href="/icons/favicon.svg?v={{ $version }}" />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>{{ $pageTitle }}</title>
+    <link rel="stylesheet" href="/css/bootstrap.min.css?v={{ $version }}" />
+    <link rel="stylesheet" href="/css/bootstrap-icons.min.css?v={{ $version }}" />
+    <link rel="stylesheet" href="/css/style.css?v={{ $version }}" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#6366f1" />
+
+    <script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Super Template",
+  "applicationCategory": "CommunicationApplication",
+  "url": "https://superfala.com/",
+  "image": "/icons/favicon.svg?v={{ $version }}",
+  "description": "IA para responder melhor, treinar conversas e criar textos que convertem.",
+  "operatingSystem": "Web-based"
+}
+    </script>
+
+    <script src="/js/htmx.min.js?v={{ $version }}" defer></script>
+    <script>
+      (() => {
+        const storageKey = "superfala-theme";
+        try {
+          const storedTheme = localStorage.getItem(storageKey);
+          const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          const theme = storedTheme || (prefersDark ? "dark" : "dark");
+          document.documentElement.setAttribute("data-bs-theme", theme);
+        } catch (error) {
+          document.documentElement.setAttribute("data-bs-theme", "dark");
+        }
+      })();
+    </script>
+
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=AW-17874089864"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'AW-17874089864');
+    </script>
+    <!-- Event snippet for Compra de Assinatura conversion page -->
+    <script>
+      gtag('event', 'conversion', {
+          'send_to': 'AW-17874089864/d2FACOyq6uYbEIjvg8tC',
+          'transaction_id': ''
+      });
+    </script>
+
+  </head>

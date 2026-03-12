@@ -1,0 +1,113 @@
+{{- $version := default .cacheVersion "1" -}}
+    <script src="/js/bootstrap.bundle.min.js?v={{ $version }}" defer></script>
+    <script src="/js/htmx.min.js?v={{ $version }}" defer></script>
+    <script>
+      (() => {
+        const storageKey = "template-theme";
+        const root = document.documentElement;
+
+        const applyTheme = (theme) => {
+          root.setAttribute("data-bs-theme", theme);
+          try {
+            localStorage.setItem(storageKey, theme);
+          } catch (error) {
+            // ignore storage failures
+          }
+
+          const label = theme === "dark" ? "Tema escuro" : "Tema claro";
+          document.querySelectorAll("[data-theme-text]").forEach((el) => (el.textContent = label));
+          document.querySelectorAll("[data-theme-toggle]").forEach((btn) =>
+            btn.setAttribute("aria-pressed", theme === "dark" ? "true" : "false")
+          );
+        };
+
+        const toggles = document.querySelectorAll("[data-theme-toggle]");
+        if (toggles.length) {
+          toggles.forEach((btn) => {
+            btn.addEventListener("click", () => {
+              const current = root.getAttribute("data-bs-theme") === "dark" ? "dark" : "light";
+              const next = current === "dark" ? "light" : "dark";
+              applyTheme(next);
+            });
+          });
+        }
+
+        const initialTheme = root.getAttribute("data-bs-theme") === "dark" ? "dark" : "light";
+        applyTheme(initialTheme);
+      })();
+
+      const scrollToBottom = (el) => {
+        if (!el) return;
+        el.scrollTop = el.scrollHeight;
+      };
+
+      document.body.addEventListener("htmx:afterSwap", (event) => {
+        const target = event.detail?.target;
+        const scrollables = [];
+
+        if (target?.dataset?.autoscroll !== undefined) {
+          scrollables.push(target);
+        }
+
+        target?.querySelectorAll?.("[data-autoscroll]").forEach((el) => scrollables.push(el));
+
+        scrollables.forEach(scrollToBottom);
+      });
+    </script>
+
+    <!-- Global Loading Overlay -->
+    <div id="global-loader">
+      <div class="loader-spinner"></div>
+      <div class="fw-bold">Carregando...</div>
+    </div>
+
+    <script>
+      // Global Loader Logic
+      (() => {
+        const loader = document.getElementById('global-loader');
+        if (!loader) return;
+
+        let requestCount = 0;
+
+        const showLoader = () => {
+          requestCount++;
+          loader.classList.add('show');
+        };
+
+        const hideLoader = () => {
+          requestCount = Math.max(0, requestCount - 1);
+          if (requestCount === 0) {
+            loader.classList.remove('show');
+          }
+        };
+
+        // HTMX Requests
+        document.body.addEventListener('htmx:beforeRequest', showLoader);
+        document.body.addEventListener('htmx:afterRequest', hideLoader);
+        document.body.addEventListener('htmx:onLoadError', hideLoader);
+        document.body.addEventListener('htmx:sendError', hideLoader);
+
+        // Standard Form Submissions (non-HTMX)
+        document.addEventListener('submit', (e) => {
+          const form = e.target;
+          if (form.tagName === 'FORM' && !form.hasAttribute('hx-post') && !form.hasAttribute('hx-get') && !form.hasAttribute('hx-put') && !form.hasAttribute('hx-patch') && !form.hasAttribute('hx-delete')) {
+            showLoader();
+          }
+        });
+
+        // Navigation (Redirections/Link clicks)
+        window.addEventListener('beforeunload', (e) => {
+          showLoader();
+        });
+
+        // Handle case where user cancels navigation or it fails
+        window.addEventListener('pageshow', (event) => {
+          if (event.persisted) {
+            hideLoader();
+          }
+          // Reset count on new page load
+          requestCount = 0;
+          loader.classList.remove('show');
+        });
+      })();
+    </script>

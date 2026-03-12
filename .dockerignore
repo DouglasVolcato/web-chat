@@ -1,0 +1,11 @@
+.git
+.env
+.air.toml
+tmp
+binaryApp
+*.log
+docs.md
+README.md
+.gitignore
+.dockerignore
+node_modules

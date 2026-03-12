@@ -1,0 +1,17 @@
+{{- $buttonClasses := default .ThemeButtonClasses "btn btn-outline-secondary d-inline-flex align-items-center gap-2" -}}
+{{- $labelClasses := default .ThemeLabelClasses "small fw-semibold d-none d-md-inline" -}}
+<button
+  class="{{ $buttonClasses }} theme-toggle-btn"
+  type="button"
+  data-theme-toggle
+  aria-pressed="false"
+  title="Alternar tema"
+>
+  <span class="theme-icon" data-theme-icon="light" aria-hidden="true">
+    <i class="bi bi-sun-fill"></i>
+  </span>
+  <span class="theme-icon" data-theme-icon="dark" aria-hidden="true">
+    <i class="bi bi-moon-stars-fill"></i>
+  </span>
+  <span class="{{ $labelClasses }}" data-theme-text>Tema claro</span>
+</button>

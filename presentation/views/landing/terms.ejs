@@ -1,0 +1,56 @@
+{{ template "head-landing.ejs" (dict "title" "Termos de Uso" "brand" "Super Template") }}
+  <body class="landing-page d-flex flex-column min-vh-100">
+    {{ template "navbar.ejs" (dict "brand" "Super Template") }}
+
+    <main class="flex-grow-1 py-5">
+      <div class="container d-flex flex-column gap-4">
+        <div>
+          <h1 class="h2 fw-bold mb-2">Termos de uso</h1>
+          <p class="text-secondary mb-0">Estes termos são um modelo base e devem ser ajustados para refletir a operação final do produto.</p>
+        </div>
+
+        <section class="d-flex flex-column gap-2">
+          <h2 class="h5 fw-semibold">1. Objetivo da aplicação</h2>
+          <p class="text-secondary mb-0">
+            A aplicação oferece funcionalidades de autenticação, dashboard e chat com inteligência artificial como base para um produto SaaS.
+            O uso deve respeitar a legislação vigente e as regras definidas pela empresa responsável.
+          </p>
+        </section>
+
+        <section class="d-flex flex-column gap-2">
+          <h2 class="h5 fw-semibold">2. Processamento de dados e serviços externos</h2>
+          <p class="text-secondary mb-0">
+            Para funcionar corretamente, a aplicação pode processar dados em serviços, servidores ou bancos de dados de outras empresas,
+            escolhidas pela empresa desenvolvedora. Esses fornecedores podem variar conforme necessidades técnicas, disponibilidade e escalabilidade.
+          </p>
+        </section>
+
+        <section class="d-flex flex-column gap-2">
+          <h2 class="h5 fw-semibold">3. Inteligência artificial e responsabilidade</h2>
+          <p class="text-secondary mb-0">
+            As respostas geradas por inteligência artificial podem conter falhas, imprecisões ou vieses. Toda saída deve ser revisada e validada
+            por especialistas antes de qualquer decisão ou uso crítico. A empresa não se responsabiliza por impactos decorrentes do uso direto dessas respostas.
+          </p>
+        </section>
+
+        <section class="d-flex flex-column gap-2">
+          <h2 class="h5 fw-semibold">4. Uso adequado</h2>
+          <p class="text-secondary mb-0">
+            É proibido utilizar a aplicação para fins ilícitos, fraudulentos ou que violem direitos de terceiros. A empresa não se responsabiliza
+            por usos indevidos realizados por usuários ou terceiros.
+          </p>
+        </section>
+
+        <section class="d-flex flex-column gap-2">
+          <h2 class="h5 fw-semibold">5. Atualizações dos termos</h2>
+          <p class="text-secondary mb-0">
+            Estes termos podem ser atualizados para refletir mudanças técnicas ou de negócio. Recomendamos revisá-los periodicamente.
+          </p>
+        </section>
+      </div>
+    </main>
+
+    {{ template "footer.ejs" (dict "brand" "Super Template") }}
+    {{ template "scripts.ejs" . }}
+  </body>
+</html>

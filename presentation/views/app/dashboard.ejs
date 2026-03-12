@@ -1,0 +1,59 @@
+{{ template "head.ejs" (dict "title" "Super Template - Dashboard" "brand" "Super Template") }}
+  <body class="bg-body d-flex flex-column min-vh-100">
+    {{ template "sidebar.ejs" (dict "currentPage" "dashboard" "user" .User) }}
+
+    <main class="app-main">
+      <section class="container py-4">
+        <div class="d-flex flex-column flex-lg-row align-items-start align-items-lg-center justify-content-between mb-4">
+          <div>
+            <h1 class="h3 fw-bold mb-1">Bem-vindo, {{ .User.Name }}</h1>
+            <p class="text-secondary">Sua área autenticada está pronta para receber novas features.</p>
+          </div>
+          <a class="btn btn-primary" href="/app/chat/new">
+            <i class="bi bi-plus-lg"></i>
+            Novo chat
+          </a>
+        </div>
+
+        <div class="row g-4">
+          <div class="col-12 col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+              <div class="card-body">
+                <h5 class="fw-bold">Chats recentes</h5>
+                {{ if .Chats }}
+                  <ul class="list-group list-group-flush">
+                    {{ range .Chats }}
+                      <li class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                          <div class="fw-semibold">{{ default .Title "Chat" }}</div>
+                          <small class="text-secondary">Atualizado em {{ .UpdatedAt.Format "02/01/2006" }}</small>
+                        </div>
+                        <a class="btn btn-sm btn-outline-primary" href="/app/chat/{{ .ID }}">Abrir</a>
+                      </li>
+                    {{ end }}
+                  </ul>
+                {{ else }}
+                  <p class="text-secondary">Nenhum chat criado ainda. Clique em "Novo chat" para começar.</p>
+                {{ end }}
+              </div>
+            </div>
+          </div>
+          <div class="col-12 col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+              <div class="card-body">
+                <h5 class="fw-bold">Próximos passos</h5>
+                <ol class="text-secondary mb-0">
+                  <li>Customize a landing page e o layout.</li>
+                  <li>Adicione novas tabelas e migrations.</li>
+                  <li>Crie seus próprios fluxos de negócio.</li>
+                </ol>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    {{ template "scripts.ejs" . }}
+  </body>
+</html>

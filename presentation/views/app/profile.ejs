@@ -1,0 +1,64 @@
+{{ template "head.ejs" (dict "title" "Super Template - Perfil" "brand" "Super Template") }}
+
+<body class="bg-body d-flex flex-column min-vh-100">
+  {{ template "sidebar.ejs" (dict "currentPage" "profile" "user" .User) }}
+
+  <main class="app-main">
+    <div class="container-xl py-4">
+      <div class="mb-4">
+        <h1 class="fw-bold mb-1">Perfil e conta</h1>
+        <p class="text-secondary mb-0">Atualize seu nome e gerencie sua conta.</p>
+      </div>
+
+      {{ if .Alert }}
+        {{ template "alert.ejs" .Alert }}
+      {{ end }}
+
+      <div class="row g-4">
+        <div class="col-12 col-lg-7">
+          <div class="card border-0 shadow-sm">
+            <div class="card-body">
+              <h2 class="h5 mb-3">Dados do perfil</h2>
+              <form method="post" action="/app/profile/name" class="d-flex flex-column gap-3">
+                <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+                <div>
+                  <label for="profileName" class="form-label fw-semibold">Nome</label>
+                  <input id="profileName" name="name" class="form-control" type="text" required minlength="2" maxlength="60" value="{{ .Profile.Name }}">
+                </div>
+                <div>
+                  <label class="form-label fw-semibold">E-mail</label>
+                  <input class="form-control" type="email" value="{{ .Profile.Email }}" disabled>
+                </div>
+                <div class="d-flex justify-content-end">
+                  <button class="btn btn-primary" type="submit">Salvar nome</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-12 col-lg-5">
+          <div class="card border-danger-subtle shadow-sm">
+            <div class="card-body">
+              <h2 class="h5 text-danger mb-2">Excluir conta</h2>
+              <p class="text-secondary">Essa ação é irreversível e encerra seu acesso imediatamente.</p>
+              <form method="post" action="/app/profile/delete" class="d-flex flex-column gap-3">
+                <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+                <div>
+                  <label for="deleteConfirm" class="form-label fw-semibold">Digite <code>EXCLUIR</code> para confirmar</label>
+                  <input id="deleteConfirm" name="confirm" class="form-control" type="text" autocomplete="off" required>
+                </div>
+                <div class="d-flex justify-content-end">
+                  <button class="btn btn-danger" type="submit">Excluir minha conta</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  {{ template "scripts.ejs" . }}
+</body>
+</html>

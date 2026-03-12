@@ -1,0 +1,33 @@
+{{- $brandName := default .brand "Super Template" -}}
+<header class="sticky-top py-3">
+  <div class="container">
+    <nav class="navbar navbar-expand-lg navbar-glass px-3 px-lg-4" aria-label="Navegação principal">
+      <a class="navbar-brand d-flex align-items-center gap-2" href="/">
+        <img src="/icons/logo.png" alt="Logo" width="32" height="32">
+        <span class="fw-bold text-primary">{{ $brandName }}</span>
+      </a>
+      <button
+        class="navbar-toggler"
+        type="button"
+        data-bs-toggle="collapse"
+        data-bs-target="#mainNav"
+        aria-controls="mainNav"
+        aria-expanded="false"
+        aria-label="Alternar navegação"
+      >
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="mainNav">
+        <ul class="navbar-nav ms-auto mb-2 mb-lg-0 align-items-lg-center gap-lg-3">
+          <li class="nav-item"><a class="nav-link fw-semibold" href="/#recursos">Recursos</a></li>
+          <li class="nav-item"><a class="nav-link fw-semibold" href="/#como-funciona">Como funciona</a></li>
+          <li class="nav-item"><a class="nav-link fw-semibold" href="/#faq">FAQ</a></li>
+        </ul>
+        <div class="d-flex align-items-center gap-2 ms-lg-4 flex-wrap">
+          {{ template "theme-toggle.ejs" (dict "ThemeButtonClasses" "btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-2" "ThemeLabelClasses" "small fw-semibold d-none d-lg-inline") }}
+          <a class="btn btn-primary" href="/login">Entrar</a>
+        </div>
+      </div>
+    </nav>
+  </div>
+</header>

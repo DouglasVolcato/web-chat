@@ -1,0 +1,343 @@
+2026/01/21 21:47:20.828385 query=
+        create table if not exists schema_migrations (
+            version text primary key,
+            applied_at timestamptz not null default now()
+        )
+     args=[]
+2026/01/21 21:47:21.229093 query=select exists(select 1 from schema_migrations where version = $1) args=[20250310_0001_create_core_tables.sql]
+2026/01/21 21:47:49.948432 query=
+        select
+            id,
+            name,
+            email,
+            password,
+            deleted_at,
+            created_at,
+            updated_at
+        from users
+        where id = $1
+            and deleted_at is null
+     args=[e2ed487d-201d-4d0d-9011-c3bb8698c40a]
+2026/01/21 21:47:58.677080 query=
+        select
+            id,
+            name,
+            email,
+            password,
+            deleted_at,
+            created_at,
+            updated_at
+        from users
+        where deleted_at is null
+          and lower(email) = lower($1)
+        limit 1
+     args=[douglasvolcato@gmail.com]
+2026/01/21 21:47:59.249256 query=
+        insert into users (
+            id,
+            name,
+            email,
+            password
+        ) values (
+            $1,
+            $2,
+            $3,
+            $4
+        )
+     args=[b08db97f-0e9d-4ae1-8f5f-f6ff784d410f Douglas Volcato douglasvolcato@gmail.com ]
+2026/01/21 21:48:00.560509 query=
+        select
+            id,
+            name,
+            email,
+            password,
+            deleted_at,
+            created_at,
+            updated_at
+        from users
+        where id = $1
+            and deleted_at is null
+     args=[b08db97f-0e9d-4ae1-8f5f-f6ff784d410f]
+2026/01/21 21:48:01.132059 query=
+        select
+            id,
+            user_id,
+            title,
+            context,
+            deleted_at,
+            created_at,
+            updated_at
+        from user_chats
+        where user_id = $1
+            and deleted_at is null
+        order by created_at desc
+     args=[b08db97f-0e9d-4ae1-8f5f-f6ff784d410f]
+2026/01/21 21:48:08.050904 query=
+        select
+            id,
+            name,
+            email,
+            password,
+            deleted_at,
+            created_at,
+            updated_at
+        from users
+        where id = $1
+            and deleted_at is null
+     args=[b08db97f-0e9d-4ae1-8f5f-f6ff784d410f]
+2026/01/21 21:48:08.622843 query=
+        select
+            id,
+            user_id,
+            title,
+            context,
+            deleted_at,
+            created_at,
+            updated_at
+        from user_chats
+        where user_id = $1
+            and deleted_at is null
+        order by created_at desc
+     args=[b08db97f-0e9d-4ae1-8f5f-f6ff784d410f]
+2026/01/21 21:48:10.632986 query=
+        select
+            id,
+            name,
+            email,
+            password,
+            deleted_at,
+            created_at,
+            updated_at
+        from users
+        where id = $1
+            and deleted_at is null
+     args=[b08db97f-0e9d-4ae1-8f5f-f6ff784d410f]
+2026/01/21 21:48:11.199521 query=
+        select
+            id,
+            user_id,
+            title,
+            context,
+            deleted_at,
+            created_at,
+            updated_at
+        from user_chats
+        where user_id = $1
+            and deleted_at is null
+        order by created_at desc
+     args=[b08db97f-0e9d-4ae1-8f5f-f6ff784d410f]
+2026/01/21 21:48:13.144633 query=
+        select
+            id,
+            name,
+            email,
+            password,
+            deleted_at,
+            created_at,
+            updated_at
+        from users
+        where id = $1
+            and deleted_at is null
+     args=[b08db97f-0e9d-4ae1-8f5f-f6ff784d410f]
+2026/01/21 21:48:13.717073 query=
+        select
+            id,
+            user_id,
+            title,
+            context,
+            deleted_at,
+            created_at,
+            updated_at
+        from user_chats
+        where user_id = $1
+            and deleted_at is null
+        order by created_at desc
+     args=[b08db97f-0e9d-4ae1-8f5f-f6ff784d410f]
+2026/01/21 21:48:17.929362 query=
+        select
+            id,
+            name,
+            email,
+            password,
+            deleted_at,
+            created_at,
+            updated_at
+        from users
+        where id = $1
+            and deleted_at is null
+     args=[b08db97f-0e9d-4ae1-8f5f-f6ff784d410f]
+2026/01/21 21:48:23.021624 query=
+        select
+            id,
+            name,
+            email,
+            password,
+            deleted_at,
+            created_at,
+            updated_at
+        from users
+        where id = $1
+            and deleted_at is null
+     args=[b08db97f-0e9d-4ae1-8f5f-f6ff784d410f]
+2026/01/21 21:48:23.590712 query=
+        insert into user_chats (
+            id,
+            user_id,
+            title,
+            context
+        ) values (
+            $1,
+            $2,
+            $3,
+            $4
+        )
+     args=[c75a10e7-a981-416b-b391-ed3a378568f0 b08db97f-0e9d-4ae1-8f5f-f6ff784d410f 3434 3434]
+2026/01/21 21:48:24.772309 query=
+        select
+            id,
+            name,
+            email,
+            password,
+            deleted_at,
+            created_at,
+            updated_at
+        from users
+        where id = $1
+            and deleted_at is null
+     args=[b08db97f-0e9d-4ae1-8f5f-f6ff784d410f]
+2026/01/21 21:48:25.355843 query=
+        select
+            id,
+            user_id,
+            title,
+            context,
+            deleted_at,
+            created_at,
+            updated_at
+        from user_chats
+        where id = $1
+            and deleted_at is null
+     args=[c75a10e7-a981-416b-b391-ed3a378568f0]
+2026/01/21 21:48:25.932374 query=
+select
+id,
+chat_id,
+role,
+message,
+emotion,
+deleted_at,
+created_at,
+updated_at
+from user_chat_messages
+where chat_id = $1
+and deleted_at is null
+order by created_at asc
+ args=[c75a10e7-a981-416b-b391-ed3a378568f0]
+2026/01/21 21:48:31.334807 query=
+        select
+            id,
+            name,
+            email,
+            password,
+            deleted_at,
+            created_at,
+            updated_at
+        from users
+        where id = $1
+            and deleted_at is null
+     args=[b08db97f-0e9d-4ae1-8f5f-f6ff784d410f]
+2026/01/21 21:48:31.903746 query=
+        select
+            id,
+            user_id,
+            title,
+            context,
+            deleted_at,
+            created_at,
+            updated_at
+        from user_chats
+        where id = $1
+            and deleted_at is null
+     args=[c75a10e7-a981-416b-b391-ed3a378568f0]
+2026/01/21 21:48:32.473010 query=
+        insert into user_chat_messages (
+            id,
+            chat_id,
+            role,
+            message,
+            emotion
+        ) values (
+            $1,
+            $2,
+            $3,
+            $4,
+            $5
+        )
+     args=[77e084fd-3211-41a3-bf3c-e901d7c4c7b8 c75a10e7-a981-416b-b391-ed3a378568f0 user Oi neutro]
+2026/01/21 21:48:33.736200 query=
+        select
+            id,
+            name,
+            email,
+            password,
+            deleted_at,
+            created_at,
+            updated_at
+        from users
+        where id = $1
+            and deleted_at is null
+     args=[b08db97f-0e9d-4ae1-8f5f-f6ff784d410f]
+2026/01/21 21:48:34.303897 query=
+        select
+            id,
+            user_id,
+            title,
+            context,
+            deleted_at,
+            created_at,
+            updated_at
+        from user_chats
+        where id = $1
+            and deleted_at is null
+     args=[c75a10e7-a981-416b-b391-ed3a378568f0]
+2026/01/21 21:48:34.872005 query=
+select
+id,
+chat_id,
+role,
+message,
+emotion,
+deleted_at,
+created_at,
+updated_at
+from user_chat_messages
+where chat_id = $1
+and deleted_at is null
+order by created_at asc
+ args=[c75a10e7-a981-416b-b391-ed3a378568f0]
+2026/01/21 21:48:37.332763 query=
+        insert into user_chat_messages (
+            id,
+            chat_id,
+            role,
+            message,
+            emotion
+        ) values (
+            $1,
+            $2,
+            $3,
+            $4,
+            $5
+        )
+     args=[ac505a34-a2a3-437e-a8c5-67456b9308c0 c75a10e7-a981-416b-b391-ed3a378568f0 assistant Olá! Como posso ajudar você hoje? amigável]
+2026/01/21 21:48:37.910325 query=
+        update
+            user_chat_messages
+        set
+            role = $1,
+            message = $2,
+            emotion = $3
+        where
+            id = $4
+            and deleted_at is null
+     args=[user Oi neutro 77e084fd-3211-41a3-bf3c-e901d7c4c7b8]

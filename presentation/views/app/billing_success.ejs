@@ -1,0 +1,21 @@
+{{ template "head-billing.ejs" (dict "title" "Finalizando Pedido | SUPER TEMPLATE") }}
+
+<body class="bg-body-tertiary">
+    <div class="container d-flex flex-column align-items-center justify-content-center vh-100">
+        <div class="text-center">
+            <div class="spinner-border text-primary mb-4" role="status" style="width: 3rem; height: 3rem;">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <h2 class="fw-bold mb-2">Processando sua assinatura...</h2>
+            <p class="text-muted">Você será redirecionado em instantes.</p>
+        </div>
+    </div>
+
+    <script>
+        // Redireciona após 3 segundos para garantir que o evento do Google Ads seja enviado
+        setTimeout(() => {
+            window.location.href = "/app/subscription";
+        }, 3000);
+    </script>
+</body>
+</html>

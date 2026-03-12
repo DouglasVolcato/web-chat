@@ -1,0 +1,522 @@
+{{ template "head.ejs" (dict "title" "SUPER TEMPLATE - Dados de Faturamento") }}
+<body class="bg-body d-flex flex-column min-vh-100">
+{{ template "sidebar.ejs" (dict "currentPage" "subscription" "user" .User) }}
+
+<main class="app-main">
+    <div class="container-xxl py-4 flex-grow-1">
+      <div class="page-hero mb-4 p-4 d-flex flex-wrap justify-content-between align-items-center gap-3 rounded-4 bg-body-tertiary shadow-sm">
+        <div class="d-flex align-items-center gap-3">
+          <div class="bg-warning-subtle text-warning rounded-circle d-flex align-items-center justify-content-center" style="width: 48px; height: 48px; background: rgba(255, 193, 7, 0.1); color: #ffc107;">
+            <i class="bi bi-bag-check fs-5"></i>
+          </div>
+          <div class="d-flex flex-column gap-0">
+            <p class="text-warning text-uppercase fw-semibold small mb-0">Checkout Seguro</p>
+            <h1 class="fw-bold mb-0">Assinatura Premium</h1>
+            <p class="text-muted mb-0 small">Preencha seus dados para concluir sua assinatura e liberar acesso total.</p>
+          </div>
+        </div>
+      </div>
+
+    <div class="row justify-content-center">
+        <div class="col-12 col-lg-8">
+            <div class="card shadow-sm border-0 rounded-4">
+                <div class="card-body p-4">
+                    <div id="billingFeedback"></div>
+
+                    <form hx-post="/app/billing" hx-target="#billingFeedback" hx-swap="innerHTML" id="billingWizard" class="wizard-form">
+                        <div class="wizard-header mb-4">
+                            <div class="nav nav-pills wizard-steps flex-column flex-md-row gap-2" role="tablist">
+                                <button class="nav-link active" type="button" data-step-button="0">1. Informações pessoais</button>
+                                <button class="nav-link" type="button" data-step-button="1">2. Endereço</button>
+                                <button class="nav-link" type="button" data-step-button="2">3. Cartão</button>
+                            </div>
+                            <div class="progress wizard-progress mt-3">
+                                <div class="progress-bar" id="wizardProgress" role="progressbar" style="width: 0%" aria-valuemin="0" aria-valuemax="100"></div>
+                            </div>
+                        </div>
+
+                        <div class="wizard-step-panel" data-step-panel="0">
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <h5 class="fw-bold mb-3 border-bottom pb-2">Informações pessoais</h5>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="name" class="form-label fw-semibold">Nome completo</label>
+                                    <input type="text" class="form-control" id="name" name="name" autocomplete="name" data-mask="text" value="{{ if .Customer }}{{ .Customer.Name }}{{ else }}{{ .User.Name }}{{ end }}" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="email" class="form-label fw-semibold">E-mail para notas fiscais</label>
+                                    <input type="email" class="form-control" id="email" name="email" autocomplete="email" data-mask="email" value="{{ if .Customer }}{{ .Customer.Email }}{{ else }}{{ .User.Email }}{{ end }}" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="cpfcnpj" class="form-label fw-semibold">CPF</label>
+                                    <input type="text" class="form-control" id="cpfcnpj" name="cpfcnpj" inputmode="numeric" autocomplete="off" data-mask="cpf" value="{{ if .Customer }}{{ .Customer.CpfCnpj }}{{ end }}" placeholder="000.000.000-00" maxlength="14" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="phone" class="form-label fw-semibold">Telefone com DDD</label>
+                                    <input type="text" class="form-control" id="phone" name="phone" inputmode="tel" autocomplete="tel" data-mask="phone" value="{{ if .Customer }}{{ if .Customer.Phone }}{{ .Customer.Phone }}{{ else }}{{ .Customer.MobilePhone }}{{ end }}{{ end }}" placeholder="(00) 00000-0000" maxlength="15" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="wizard-step-panel d-none" data-step-panel="1">
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <h5 class="fw-bold mb-3 border-bottom pb-2">Endereço</h5>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="postal_code" class="form-label fw-semibold">CEP</label>
+                                    <input type="text" class="form-control" id="postal_code" name="postal_code" inputmode="numeric" autocomplete="postal-code" data-mask="cep" value="{{ if .Customer }}{{ .Customer.PostalCode }}{{ end }}" placeholder="00000-000" maxlength="9" required>
+                                    <div id="cepStatus" class="form-text small text-muted">Informe o CEP para liberar o endereço.</div>
+                                </div>
+                                <div class="col-md-8">
+                                    <label for="address" class="form-label fw-semibold">Logradouro (Rua/Av)</label>
+                                    <input type="text" class="form-control" id="address" name="address" autocomplete="street-address" data-mask="text" value="{{ if .Customer }}{{ .Customer.Address }}{{ end }}" placeholder="Rua xxxxxx" required disabled>
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="address_number" class="form-label fw-semibold">Número</label>
+                                    <input type="text" class="form-control" id="address_number" name="address_number" autocomplete="off" data-mask="address-number" value="{{ if .Customer }}{{ .Customer.AddressNumber }}{{ end }}" placeholder="000" required disabled>
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="complement" class="form-label fw-semibold">Complemento</label>
+                                    <input type="text" class="form-control" id="complement" name="complement" autocomplete="address-line2" data-mask="text" value="{{ if .Customer }}{{ .Customer.Complement }}{{ end }}" placeholder="" disabled>
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="province" class="form-label fw-semibold">Bairro</label>
+                                    <input type="text" class="form-control" id="province" name="province" autocomplete="address-level3" data-mask="text" value="{{ if .Customer }}{{ .Customer.Province }}{{ end }}" placeholder="" required disabled>
+                                </div>
+                                <div class="col-md-3">
+                                    <label for="city" class="form-label fw-semibold">Cidade</label>
+                                    <input type="text" class="form-control" id="city" name="city" autocomplete="address-level2" data-mask="text" placeholder="" disabled>
+                                </div>
+
+                                <div class="col-12 mt-4">
+                                    <h5 class="fw-bold mb-3 border-bottom pb-2">Escolha seu Plano</h5>
+                                    <div class="row g-3">
+                                        <div class="col-md-6">
+                                            <div class="form-check card-plan p-3 border rounded-3 position-relative">
+                                                <input class="form-check-input stretched-link" type="radio" name="plan" id="plan_monthly" value="monthly" checked>
+                                                <label class="form-check-label ps-2" for="plan_monthly">
+                                                    <span class="d-block fw-bold h6 mb-1">Plano Mensal</span>
+                                                    <span class="d-block text-primary fw-bold mb-1">R$ 49,90 / mês</span>
+                                                    <span class="d-block text-muted small">Acesso total aos recursos premium, cobrado mensalmente.</span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="form-check card-plan p-3 border rounded-3 position-relative">
+                                                <input class="form-check-input stretched-link" type="radio" name="plan" id="plan_yearly" value="yearly">
+                                                <label class="form-check-label ps-2" for="plan_yearly">
+                                                    <span class="d-block fw-bold h6 mb-1">Plano Anual</span>
+                                                    <span class="d-block text-primary fw-bold mb-1">R$ 478,90 / ano</span>
+                                                    <span class="d-block text-success small fw-semibold">Economize 20%!</span>
+                                                    <span class="d-block text-muted small">Pagamento único anual com desconto exclusivo.</span>
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="wizard-step-panel d-none" data-step-panel="2">
+                            <div class="row g-3">
+                                <div class="col-12">
+                                    <h5 class="fw-bold mb-3 border-bottom pb-2">Cartão de crédito</h5>
+                                    <p class="text-muted small mb-0">Informe o cartão para cobrança automática da assinatura.</p>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="card_holder_name" class="form-label fw-semibold">Nome impresso no cartão</label>
+                                    <input type="text" class="form-control" id="card_holder_name" name="card_holder_name" autocomplete="cc-name" data-mask="text" value="{{ if .Customer }}{{ .Customer.Name }}{{ else }}{{ .User.Name }}{{ end }}" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label for="card_number" class="form-label fw-semibold">Número do cartão</label>
+                                    <input type="text" class="form-control" id="card_number" name="card_number" inputmode="numeric" autocomplete="cc-number" data-mask="card-number" placeholder="0000 0000 0000 0000" maxlength="23" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="card_expiry_month" class="form-label fw-semibold">Mês</label>
+                                    <input type="text" class="form-control" id="card_expiry_month" name="card_expiry_month" inputmode="numeric" autocomplete="cc-exp-month" data-mask="card-exp-month" placeholder="MM" maxlength="2" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="card_expiry_year" class="form-label fw-semibold">Ano</label>
+                                    <input type="text" class="form-control" id="card_expiry_year" name="card_expiry_year" inputmode="numeric" autocomplete="cc-exp-year" data-mask="card-exp-year" placeholder="AAAA" maxlength="4" required>
+                                </div>
+                                <div class="col-md-4">
+                                    <label for="card_cvv" class="form-label fw-semibold">CVV</label>
+                                    <input type="text" class="form-control" id="card_cvv" name="card_cvv" inputmode="numeric" autocomplete="cc-csc" data-mask="card-cvv" placeholder="000" maxlength="4" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="wizard-actions mt-4 d-flex justify-content-between align-items-center">
+                            <a href="/app/subscription" class="btn btn-link text-muted text-decoration-none" data-wizard-back>Voltar</a>
+                            <div class="d-flex gap-2 flex-wrap">
+                                <button type="button" class="btn btn-primary btn-lg px-5 fw-bold" data-wizard-next>Continuar</button>
+                                <button type="submit" class="btn btn-primary btn-lg px-5 fw-bold d-none" data-loading-button data-wizard-submit>
+                                    <span data-loading-label>Confirmar e Assinar</span>
+                                    <span class="d-none" data-loading-spinner>
+                                        <span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span>
+                                        Carregando...
+                                    </span>
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+</main>
+
+<style>
+    .wizard-steps .nav-link {
+        border: 1px solid var(--bs-border-color);
+        color: var(--bs-body-color);
+        background-color: var(--bs-body-bg);
+    }
+    .wizard-steps .nav-link.active {
+        background-color: var(--bs-primary-bg-subtle);
+        border-color: var(--bs-primary);
+        color: var(--bs-primary);
+    }
+    .wizard-steps .nav-link.completed {
+        border-color: var(--bs-success);
+        color: var(--bs-success);
+    }
+    .wizard-progress {
+        height: 6px;
+    }
+    .wizard-progress .progress-bar {
+        transition: width 0.3s ease;
+    }
+    .card-plan:has(.form-check-input:checked) {
+        border-color: var(--bs-primary) !important;
+        background-color: var(--bs-primary-bg-subtle) !important;
+    }
+    .form-check-input:checked {
+        background-color: var(--bs-primary);
+        border-color: var(--bs-primary);
+    }
+</style>
+
+<script>
+    (() => {
+        const byId = (id) => document.getElementById(id);
+        const fields = {
+            name: byId("name"),
+            email: byId("email"),
+            cpfcnpj: byId("cpfcnpj"),
+            phone: byId("phone"),
+            postal: byId("postal_code"),
+            address: byId("address"),
+            addressNumber: byId("address_number"),
+            complement: byId("complement"),
+            province: byId("province"),
+            city: byId("city"),
+            cardHolderName: byId("card_holder_name"),
+            cardNumber: byId("card_number"),
+            cardExpiryMonth: byId("card_expiry_month"),
+            cardExpiryYear: byId("card_expiry_year"),
+            cardCvv: byId("card_cvv"),
+        };
+        const cepStatus = byId("cepStatus");
+        const lockableFields = [fields.address, fields.addressNumber, fields.province, fields.city, fields.complement];
+
+        const onlyDigits = (value) => value.replace(/\D/g, "");
+        const normalizeText = (value) => value.replace(/\s+/g, " ").trim();
+
+        const maskCpf = (value) => {
+            const digits = onlyDigits(value).slice(0, 11);
+            if (digits.length <= 3) return digits;
+            if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+            if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+            return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+        };
+
+        const maskCardNumber = (value) => {
+            const digits = onlyDigits(value).slice(0, 16);
+            const groups = digits.match(/.{1,4}/g) || [];
+            return groups.join(" ");
+        };
+
+        const maskCardExpiryMonth = (value) => onlyDigits(value).slice(0, 2);
+        const maskCardExpiryYear = (value) => onlyDigits(value).slice(0, 4);
+        const maskCardCvv = (value) => onlyDigits(value).slice(0, 3);
+
+        const maskPhone = (value) => {
+            const digits = onlyDigits(value).slice(0, 11);
+            if (digits.length <= 2) return digits;
+            if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+            if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+            return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+        };
+
+        const maskCep = (value) => {
+            const digits = onlyDigits(value).slice(0, 8);
+            if (digits.length <= 5) return digits;
+            return `${digits.slice(0, 5)}-${digits.slice(5)}`;
+        };
+
+        const maskAddressNumber = (value) => value.toUpperCase().replace(/[^0-9A-Z/]/g, "").slice(0, 10);
+
+        const setCepStatus = (message, tone) => {
+            if (!cepStatus) return;
+            cepStatus.textContent = message;
+            cepStatus.classList.remove("text-muted", "text-danger", "text-success");
+            if (tone === "danger") {
+                cepStatus.classList.add("text-danger");
+                return;
+            }
+            if (tone === "success") {
+                cepStatus.classList.add("text-success");
+                return;
+            }
+            cepStatus.classList.add("text-muted");
+        };
+
+        const setLocked = (locked, clear = false) => {
+            lockableFields.forEach((field) => {
+                if (!field) return;
+                field.disabled = locked;
+                if (locked && clear) {
+                    field.value = "";
+                }
+            });
+        };
+
+        if (fields.cpfcnpj) {
+            fields.cpfcnpj.addEventListener("input", (event) => {
+                event.target.value = maskCpf(event.target.value);
+            });
+        }
+
+        if (fields.phone) {
+            fields.phone.addEventListener("input", (event) => {
+                event.target.value = maskPhone(event.target.value);
+            });
+        }
+
+        if (fields.postal) {
+            fields.postal.addEventListener("input", (event) => {
+                event.target.value = maskCep(event.target.value);
+            });
+        }
+
+        if (fields.addressNumber) {
+            fields.addressNumber.addEventListener("input", (event) => {
+                event.target.value = maskAddressNumber(event.target.value);
+            });
+        }
+
+        if (fields.cardNumber) {
+            fields.cardNumber.addEventListener("input", (event) => {
+                event.target.value = maskCardNumber(event.target.value);
+            });
+        }
+
+        if (fields.cardExpiryMonth) {
+            fields.cardExpiryMonth.addEventListener("input", (event) => {
+                event.target.value = maskCardExpiryMonth(event.target.value);
+            });
+        }
+
+        if (fields.cardExpiryYear) {
+            fields.cardExpiryYear.addEventListener("input", (event) => {
+                event.target.value = maskCardExpiryYear(event.target.value);
+            });
+        }
+
+        if (fields.cardCvv) {
+            fields.cardCvv.addEventListener("input", (event) => {
+                event.target.value = maskCardCvv(event.target.value);
+            });
+        }
+
+        const formatInitialValues = () => {
+            if (fields.cpfcnpj) {
+                const cpfDigits = onlyDigits(fields.cpfcnpj.value);
+                if (cpfDigits.length <= 11) {
+                    fields.cpfcnpj.value = maskCpf(fields.cpfcnpj.value);
+                }
+            }
+            if (fields.phone) fields.phone.value = maskPhone(fields.phone.value);
+            if (fields.postal) fields.postal.value = maskCep(fields.postal.value);
+            if (fields.addressNumber) fields.addressNumber.value = maskAddressNumber(fields.addressNumber.value);
+        };
+
+        formatInitialValues();
+
+        ["name", "address", "complement", "province", "city", "cardHolderName"].forEach((key) => {
+            const field = fields[key];
+            if (!field) return;
+            field.addEventListener("blur", (event) => {
+                event.target.value = normalizeText(event.target.value);
+            });
+        });
+
+        if (fields.email) {
+            fields.email.addEventListener("blur", (event) => {
+                event.target.value = event.target.value.trim().toLowerCase();
+            });
+        }
+
+        let cepTimeout = null;
+
+        const fetchCep = (cep) => {
+            setLocked(true, false);
+            setCepStatus("Buscando CEP...", "muted");
+            fetch(`https://viacep.com.br/ws/${cep}/json/`)
+                .then((response) => response.json())
+                .then((data) => {
+                    if (data.erro) {
+                        setLocked(true);
+                        setCepStatus("CEP não encontrado. Verifique e tente novamente.", "danger");
+                        return;
+                    }
+
+                    if (fields.address) fields.address.value = data.logradouro || "";
+                    if (fields.province) fields.province.value = data.bairro || "";
+                    if (fields.city) fields.city.value = data.localidade || "";
+                    setLocked(false);
+                    setCepStatus("CEP encontrado. Preencha o número do endereço.", "success");
+                    if (fields.addressNumber) {
+                        fields.addressNumber.focus();
+                    }
+                })
+                .catch(() => {
+                    setLocked(true);
+                    setCepStatus("Não foi possível consultar o CEP agora.", "danger");
+                });
+        };
+
+        const handleCepChange = () => {
+            if (!fields.postal) return;
+            const digits = onlyDigits(fields.postal.value);
+            if (digits.length !== 8) {
+                setLocked(true, true);
+                setCepStatus("Informe um CEP válido para liberar o endereço.", "muted");
+                return;
+            }
+
+            if (cepTimeout) clearTimeout(cepTimeout);
+            cepTimeout = setTimeout(() => fetchCep(digits), 250);
+        };
+
+        if (fields.postal) {
+            fields.postal.addEventListener("input", handleCepChange);
+            fields.postal.addEventListener("blur", handleCepChange);
+        }
+
+        const wizard = byId("billingWizard");
+        if (wizard) {
+            const stepButtons = Array.from(wizard.querySelectorAll("[data-step-button]"));
+            const stepPanels = Array.from(wizard.querySelectorAll("[data-step-panel]"));
+            const backLink = wizard.querySelector("[data-wizard-back]");
+            const nextButton = wizard.querySelector("[data-wizard-next]");
+            const submitButton = wizard.querySelector("[data-wizard-submit]");
+            const progressBar = byId("wizardProgress");
+            let currentStep = 0;
+
+            const updateWizard = () => {
+                stepPanels.forEach((panel, index) => {
+                    panel.classList.toggle("d-none", index !== currentStep);
+                });
+                stepButtons.forEach((button, index) => {
+                    button.classList.remove("active", "completed");
+                    if (index < currentStep) {
+                        button.classList.add("completed");
+                        return;
+                    }
+                    if (index === currentStep) {
+                        button.classList.add("active");
+                    }
+                });
+
+                if (nextButton) {
+                    nextButton.classList.toggle("d-none", currentStep >= stepPanels.length - 1);
+                }
+                if (submitButton) {
+                    submitButton.classList.toggle("d-none", currentStep < stepPanels.length - 1);
+                }
+                if (backLink) {
+                    backLink.textContent = currentStep === 0 ? "Voltar" : "Voltar etapa";
+                }
+                if (progressBar) {
+                    const totalSteps = stepPanels.length;
+                    const percent = totalSteps > 1 ? (currentStep / (totalSteps - 1)) * 100 : 100;
+                    progressBar.style.width = `${percent}%`;
+                    progressBar.setAttribute("aria-valuenow", `${Math.round(percent)}`);
+                }
+            };
+
+            const validateStep = () => {
+                const panel = stepPanels[currentStep];
+                if (!panel) return true;
+
+                if (currentStep === 1 && (fields.address?.disabled || fields.addressNumber?.disabled || fields.province?.disabled)) {
+                    setCepStatus("Informe um CEP válido para liberar o endereço.", "danger");
+                    fields.postal?.focus();
+                    return false;
+                }
+
+                const inputs = panel.querySelectorAll("input, select, textarea");
+                for (const input of inputs) {
+                    if (input.disabled) continue;
+                    if (!input.checkValidity()) {
+                        input.reportValidity();
+                        return false;
+                    }
+                }
+
+                return true;
+            };
+
+            stepButtons.forEach((button, index) => {
+                button.addEventListener("click", () => {
+                    if (index === currentStep) return;
+                    if (index > currentStep && !validateStep()) return;
+                    currentStep = index;
+                    updateWizard();
+                });
+            });
+
+            if (nextButton) {
+                nextButton.addEventListener("click", () => {
+                    if (!validateStep()) return;
+                    currentStep = Math.min(currentStep + 1, stepPanels.length - 1);
+                    updateWizard();
+                });
+            }
+
+            if (backLink) {
+                backLink.addEventListener("click", (event) => {
+                    if (currentStep === 0) return;
+                    event.preventDefault();
+                    currentStep = Math.max(currentStep - 1, 0);
+                    updateWizard();
+                });
+            }
+
+            wizard.addEventListener("submit", (event) => {
+                if (currentStep >= stepPanels.length - 1) return;
+                event.preventDefault();
+                if (!validateStep()) return;
+                currentStep = Math.min(currentStep + 1, stepPanels.length - 1);
+                updateWizard();
+            });
+
+            updateWizard();
+        }
+
+        const initialCep = fields.postal ? onlyDigits(fields.postal.value) : "";
+        if (initialCep.length === 8) {
+            fetchCep(initialCep);
+        } else {
+            setLocked(true, true);
+        }
+    })();
+</script>
+
+{{ template "footer.ejs" (dict "brand" "SUPER TEMPLATE" "appFooter" true) }}
+{{ template "scripts.ejs" . }}

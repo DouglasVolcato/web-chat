@@ -1,0 +1,88 @@
+{{- $current := default .currentPage "" -}}
+{{- $user := .user -}}
+
+<!-- Mobile Trigger -->
+<button class="btn btn-premium position-fixed top-0 start-0 m-3 d-lg-none z-3" type="button" data-bs-toggle="offcanvas"
+    data-bs-target="#sidebarOffcanvas">
+    <i class="bi bi-list fs-4"></i>
+</button>
+
+<!-- Desktop Sidebar -->
+<aside class="app-sidebar d-none d-lg-flex flex-column" style="overflow-y: auto;">
+    <div class="mb-5 px-2">
+        <a href="/app/dashboard" class="d-flex align-items-center gap-2 text-decoration-none">
+            <img src="/icons/logo.png" alt="Logo" width="32" height="32">
+            <span class="fw-bold fs-5" style="color: var(--sf-text-main);">Super Template</span>
+        </a>
+    </div>
+
+    <nav class="sidebar-nav flex-grow-1">
+        <a href="/app/dashboard" class="nav-link {{ if eq $current "dashboard" }}active{{ end }}">
+            <i class="bi bi-grid"></i>
+            <span>Dashboard</span>
+        </a>
+        <a href="/app/chat" class="nav-link {{ if eq $current "chat" }}active{{ end }}">
+            <i class="bi bi-chat-dots"></i>
+            <span>Chat com IA</span>
+        </a>
+        <a href="/app/subscription" class="nav-link {{ if eq $current "subscription" }}active{{ end }}">
+            <i class="bi bi-credit-card"></i>
+            <span>Assinatura</span>
+        </a>
+        <a href="/app/profile" class="nav-link {{ if eq $current "profile" }}active{{ end }}">
+            <i class="bi bi-person"></i>
+            <span>Perfil</span>
+        </a>
+    </nav>
+
+    <div class="mt-auto pt-4 border-top border-light-subtle">
+        <div class="d-flex align-items-center gap-3 p-2 rounded-3">
+            <div class="bg-primary-subtle text-primary rounded-circle d-flex align-items-center justify-content-center"
+                style="width: 40px; height: 40px;">
+                <span class="fw-bold">{{ if $user }}{{ slice $user.Name 0 1 }}{{ else }}U{{ end }}</span>
+            </div>
+            <div class="overflow-hidden">
+                <p class="mb-0 fw-semibold text-truncate" style="color: var(--sf-text-main); font-size: 0.9rem;">{{ if $user }}{{ $user.Name }}{{ else }}Usuário{{ end }}</p>
+                <p class="mb-0 small text-muted text-truncate">{{ if $user }}{{ $user.Email }}{{ else }}email@example.com{{ end }}</p>
+            </div>
+        </div>
+        <div class="mt-3 d-flex justify-content-between align-items-center px-2">
+            {{ template "theme-toggle.ejs" (dict "ThemeButtonClasses" "theme-switch" "ThemeLabelClasses" "d-none") }}
+            <form class="m-0" action="/logout" method="post" hx-post="/logout" hx-swap="none">
+                <button type="submit" class="btn btn-ghost btn-sm text-danger" title="Sair">
+                    <i class="bi bi-box-arrow-right fs-5"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+</aside>
+
+<!-- Mobile Sidebar (Offcanvas) -->
+<div class="offcanvas offcanvas-start bg-surface" tabindex="-1" id="sidebarOffcanvas">
+    <div class="offcanvas-header">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
+            <img src="/icons/logo.png" alt="Logo" width="28" height="28">
+            <h5 class="offcanvas-title fw-bold">Super Template</h5>
+        </div>
+        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+    </div>
+    <div class="offcanvas-body p-0">
+        <nav class="sidebar-nav d-flex flex-column p-3">
+            <a href="/app/dashboard" class="nav-link {{ if eq $current "dashboard" }}active{{ end }}">
+                <i class="bi bi-grid"></i> Dashboard
+            </a>
+            <a href="/app/chat" class="nav-link {{ if eq $current "chat" }}active{{ end }}">
+                <i class="bi bi-chat-dots"></i> Chat com IA
+            </a>
+            <a href="/app/profile" class="nav-link {{ if eq $current "profile" }}active{{ end }}">
+                <i class="bi bi-person"></i> Perfil
+            </a>
+        </nav>
+        <div class="mt-auto p-3 border-top">
+            {{ template "theme-toggle.ejs" (dict "ThemeButtonClasses" "theme-switch" "ThemeLabelClasses" "d-none") }}
+            <form action="/logout" method="post" class="mt-3 w-100">
+                <button class="btn btn-outline-danger w-100">Sair</button>
+            </form>
+        </div>
+    </div>
+</div>

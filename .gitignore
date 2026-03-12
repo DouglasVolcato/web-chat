@@ -1,0 +1,4 @@
+.env
+app/tmp/main
+app/logs
+app/tmp/uploads/

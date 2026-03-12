@@ -1,0 +1,55 @@
+{{ template "head-landing.ejs" (dict "title" "Política de Privacidade" "brand" "Super Template") }}
+  <body class="landing-page d-flex flex-column min-vh-100">
+    {{ template "navbar.ejs" (dict "brand" "Super Template") }}
+
+    <main class="flex-grow-1 py-5">
+      <div class="container d-flex flex-column gap-4">
+        <div>
+          <h1 class="h2 fw-bold mb-2">Política de privacidade</h1>
+          <p class="text-secondary mb-0">Este texto é um modelo base e deve ser adaptado conforme o produto final e suas exigências legais.</p>
+        </div>
+
+        <section class="d-flex flex-column gap-2">
+          <h2 class="h5 fw-semibold">1. Dados coletados</h2>
+          <p class="text-secondary mb-0">
+            A aplicação pode coletar dados de cadastro, autenticação e uso, como nome, e-mail, identificadores e conteúdo de mensagens para
+            permitir o funcionamento do serviço e melhorar a experiência do usuário.
+          </p>
+        </section>
+
+        <section class="d-flex flex-column gap-2">
+          <h2 class="h5 fw-semibold">2. Processamento em serviços de terceiros</h2>
+          <p class="text-secondary mb-0">
+            Os dados podem ser processados e armazenados em serviços, servidores ou bancos de dados de outras empresas escolhidas pela
+            empresa desenvolvedora, quando necessário para operar, escalar ou garantir a continuidade da aplicação.
+          </p>
+        </section>
+
+        <section class="d-flex flex-column gap-2">
+          <h2 class="h5 fw-semibold">3. Inteligência artificial</h2>
+          <p class="text-secondary mb-0">
+            A aplicação pode utilizar inteligência artificial para gerar respostas. Esses resultados podem ser falhos e devem ser validados por
+            especialistas antes de qualquer uso crítico. A empresa não se responsabiliza por decisões tomadas com base em respostas automatizadas.
+          </p>
+        </section>
+
+        <section class="d-flex flex-column gap-2">
+          <h2 class="h5 fw-semibold">4. Uso ilícito</h2>
+          <p class="text-secondary mb-0">
+            O usuário é o único responsável pelo uso da aplicação. A empresa não se responsabiliza por usos ilícitos ou que violem direitos de terceiros.
+          </p>
+        </section>
+
+        <section class="d-flex flex-column gap-2">
+          <h2 class="h5 fw-semibold">5. Atualizações</h2>
+          <p class="text-secondary mb-0">
+            Podemos atualizar esta política para refletir alterações técnicas, legais ou operacionais. Notificaremos os usuários quando necessário.
+          </p>
+        </section>
+      </div>
+    </main>
+
+    {{ template "footer.ejs" (dict "brand" "Super Template") }}
+    {{ template "scripts.ejs" . }}
+  </body>
+</html>

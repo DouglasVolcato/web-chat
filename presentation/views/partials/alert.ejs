@@ -1,0 +1,8 @@
+<div
+  class="alert alert-{{ default .Type "info" }} alert-dismissible fade show"
+  role="alert"
+  {{ if .OOB }}hx-swap-oob="true"{{ end }}
+>
+  {{ default .Message "Ação executada." }}
+  <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+</div>

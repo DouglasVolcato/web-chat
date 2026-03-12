@@ -1,0 +1,76 @@
+{{ template "head-landing.ejs" (dict "title" "Super Template - Login" "brand" "Super Template") }}
+  <body class="bg-body-secondary">
+    <main class="min-vh-100 d-flex align-items-center justify-content-center py-5">
+      <div class="container">
+        <div class="row justify-content-center">
+          <div class="col-12 col-md-8 col-lg-5">
+            <div class="card shadow-lg border-0">
+              <div class="card-body p-4">
+                <div class="text-center mb-4">
+                  <img src="/icons/logo.png" alt="Logo" width="48" height="48" class="mb-2">
+                  <h1 class="h4 fw-bold mb-1">Entrar no Super Template</h1>
+                  <p class="text-secondary">Faça login para acessar sua área segura e conversar com a IA.</p>
+                </div>
+
+                <div id="google-button-wrapper" class="d-flex justify-content-center mb-3">
+                  <div id="google-btn"></div>
+                </div>
+
+                <form id="google-auth-form" hx-post="/auth/google" hx-target="#login-feedback" hx-swap="innerHTML">
+                  <input type="hidden" name="credential" id="google-credential-input">
+                </form>
+
+                <div id="login-feedback" class="mt-3"></div>
+
+                <div class="text-center mt-4">
+                  <a href="/" class="text-decoration-none">Voltar para a landing page</a>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script>
+      const googleContainer = document.getElementById("google-btn");
+      const form = document.getElementById("google-auth-form");
+      const credentialInput = document.getElementById("google-credential-input");
+      const clientId = "{{ .GoogleClientID }}";
+
+      function initGoogle() {
+        if (!clientId) {
+          return;
+        }
+
+        if (!window.google || !window.google.accounts || !window.google.accounts.id) {
+          setTimeout(initGoogle, 300);
+          return;
+        }
+
+        if (!googleContainer || !form || !credentialInput) {
+          return;
+        }
+
+        window.google.accounts.id.initialize({
+          client_id: clientId,
+          callback: (response) => {
+            credentialInput.value = response.credential;
+            form.requestSubmit();
+          },
+        });
+
+        window.google.accounts.id.renderButton(googleContainer, {
+          theme: "outline",
+          size: "large",
+          width: "280",
+        });
+
+        window.google.accounts.id.prompt();
+      }
+
+      initGoogle();
+    </script>
+  </body>
+</html>

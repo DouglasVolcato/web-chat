@@ -1,0 +1,35 @@
+{{- $version := default .cacheVersion "1" -}}
+{{- $pageTitle := default .title (default .brand "Super Template") -}}
+{{- $brandName := default .brand "Super Template" -}}
+<!DOCTYPE html>
+<html lang="pt-BR" data-bs-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="{{ $brandName }} é um template web com landing page, login Google e chat com IA."
+    />
+    <link rel="icon" type="image/x-icon" href="/icons/favicon.svg?v={{ $version }}" />
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <title>{{ $pageTitle }}</title>
+    <link rel="stylesheet" href="/css/bootstrap.min.css?v={{ $version }}" />
+    <link rel="stylesheet" href="/css/bootstrap-icons.min.css?v={{ $version }}" />
+    <link rel="stylesheet" href="/css/style.css?v={{ $version }}" />
+    <meta name="theme-color" content="#0f766e" />
+
+    <script src="/js/htmx.min.js?v={{ $version }}" defer></script>
+    <script>
+      (() => {
+        const storageKey = "template-theme";
+        try {
+          const storedTheme = localStorage.getItem(storageKey);
+          const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+          const theme = storedTheme || (prefersDark ? "dark" : "light");
+          document.documentElement.setAttribute("data-bs-theme", theme);
+        } catch (error) {
+          document.documentElement.setAttribute("data-bs-theme", "dark");
+        }
+      })();
+    </script>
+  </head>
