@@ -2154,20 +2154,17 @@ footer.app-footer {
 .wa-welcome-feature {
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    padding: 0.65rem 1.5rem;
-    background: var(--sf-bg-surface);
-    border: 1px solid var(--sf-border);
-    border-radius: var(--sf-radius-full);
-    font-size: 0.85rem;
-    color: var(--sf-text-main);
-    transition: all 0.2s ease;
+    gap: 0.85rem;
+    padding: 0.4rem 0.5rem;
+    background: transparent;
+    border: none;
+    font-size: 0.95rem;
+    color: var(--sf-text-muted);
 }
 
-.wa-welcome-feature:hover {
-    border-color: var(--sf-primary-light);
-    transform: translateY(-1px);
-    box-shadow: var(--sf-shadow-sm);
+.wa-welcome-feature i {
+    color: var(--sf-primary-light);
+    font-size: 1.25rem;
 }
 
 .wa-welcome-feature i {
@@ -2182,10 +2179,13 @@ footer.app-footer {
 .wa-settings-wrapper {
     max-width: 600px;
     margin: 0 auto;
-    min-height: 100vh;
+    height: 100vh;
+    height: 100dvh;
+    overflow-y: auto;
     background: var(--sf-bg-surface);
     border-left: 1px solid var(--sf-border);
     border-right: 1px solid var(--sf-border);
+    -webkit-overflow-scrolling: touch; /* Smooth scroll for iOS */
 }
 
 @media (max-width: 767.98px) {

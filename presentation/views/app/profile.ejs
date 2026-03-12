@@ -53,7 +53,7 @@
     </section>
 
     <!-- QR Code Section -->
-    <section class="wa-settings-section">
+    <section class="wa-settings-section" id="qr-section">
       <h3 class="wa-settings-section-title">
         <i class="bi bi-qr-code"></i>
         Contatos via QR Code
@@ -178,10 +178,18 @@
     try {
       const fd = new FormData();
       fd.append('csrf_token', '{{ .CSRFToken }}');
-      const res = await fetch('{{ url "/app/messages/contacts/qr" }}', { method: 'POST', body: fd, credentials: 'same-origin' });
+      const res = await fetch('{{ url "/app/messages/contacts/qr" }}', { 
+        method: 'POST', 
+        headers: { 
+          'X-CSRF-Token': '{{ .CSRFToken }}' 
+        },
+        body: fd, 
+        credentials: 'same-origin' 
+      });
       
       if (!res.ok) {
-        alert('Falha ao gerar QR. Tente novamente.');
+        const text = await res.text();
+        alert('Falha ao gerar QR: ' + text);
         return;
       }
       
@@ -221,6 +229,9 @@
     const scanPanel = document.getElementById('scan-panel');
     const status = document.getElementById('scan-status');
     scanPanel.classList.remove('d-none');
+    
+    // Scroll to scan panel so user sees the camera
+    scanPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
     
     if (!html5QrCode) {
       html5QrCode = new Html5Qrcode("qr-reader");
