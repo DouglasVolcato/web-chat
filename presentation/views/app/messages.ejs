@@ -1,85 +1,80 @@
 {{ template "head.ejs" (dict "title" "Mensagens" "brand" "Web Chat") }}
-<body>
-<div class="container-fluid py-3">
-  <div class="row g-3">
-    <div class="col-12 col-md-4">
-      <div class="card h-100">
-        <div class="card-body">
-          <h1 class="h5">Chats</h1>
+<body class="bg-body d-flex flex-column min-vh-100">
+{{ template "sidebar.ejs" (dict "currentPage" "messages" "user" .User) }}
 
-          <form id="qr-generate-form" class="mb-2" method="post" action="{{ url "/app/messages/contacts/qr" }}">
-            <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
-            <button class="btn btn-outline-primary btn-sm" type="submit">Gerar QR de contato</button>
-          </form>
-          <div id="qr-result" class="small text-secondary mb-3"></div>
+<main class="app-main">
+  <section class="container-fluid py-3 px-lg-4">
+    <div class="messages-shell">
+      <aside class="messages-sidebar">
+        <div class="messages-sidebar-header">
+          <h1 class="h5 mb-1">Conversas</h1>
+          <p class="text-secondary small mb-0">Gerencie contatos no seu <a href="{{ url "/app/profile" }}">perfil</a>.</p>
+        </div>
 
-          <form class="mb-3" method="post" action="{{ url "/app/messages/contacts/qr/redeem" }}">
-            <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
-            <input class="form-control form-control-sm mb-2" type="text" name="token" placeholder="Cole token QR" required>
-            <button class="btn btn-primary btn-sm" type="submit">Adicionar contato</button>
-          </form>
-
+        <div class="messages-list" role="list">
           {{ range .Chats }}
-            <a class="d-block text-decoration-none border rounded p-2 mb-2" href="{{ url (print "/app/messages/" .ChatID) }}">
-              <div class="fw-semibold">{{ .ContactName }}</div>
-              {{ if .HasLastMessage }}<small class="text-secondary">{{ .LastMessage }}</small>{{ end }}
-            </a>
-          {{ else }}
-            <p class="text-secondary">Sem chats ativos.</p>
-          {{ end }}
-        </div>
-      </div>
-    </div>
-
-    <div class="col-12 col-md-8">
-      <div class="card h-100">
-        <div class="card-body d-flex flex-column" style="min-height: 65vh;">
-          <h2 class="h6">Conversa</h2>
-          <div class="flex-grow-1 overflow-auto border rounded p-2 mb-2">
-            {{ range .Messages }}
-              <div class="mb-2">
-                <small class="text-secondary">{{ .SenderDisplay }}</small>
-                <div>{{ .Content }}</div>
+          <a role="listitem" class="messages-chat-item {{ if eq .ChatID $.ActiveChatID }}active{{ end }}" href="{{ url (print "/app/messages/" .ChatID) }}">
+            <div class="messages-chat-avatar">{{ if gt (len .ContactName) 0 }}{{ slice .ContactName 0 1 }}{{ else }}?{{ end }}</div>
+            <div class="messages-chat-content">
+              <div class="messages-chat-top">
+                <strong class="messages-chat-name">{{ .ContactName }}</strong>
               </div>
-            {{ else }}
-              <p class="text-secondary">Selecione um chat e envie mensagens de texto.</p>
-            {{ end }}
-          </div>
-
-          {{ if .ActiveChatID }}
-          <form method="post" action="{{ url "/app/messages/send" }}" class="d-flex gap-2">
-            <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
-            {{ range .Chats }}{{ if eq .ChatID $.ActiveChatID }}<input type="hidden" name="target_user_id" value="{{ .ContactUserID }}">{{ end }}{{ end }}
-            <input class="form-control" maxlength="2000" type="text" name="content" placeholder="Digite sua mensagem" required>
-            <button class="btn btn-success" type="submit">Enviar</button>
-          </form>
+              <p class="messages-chat-preview mb-0">{{ if .HasLastMessage }}{{ .LastMessage }}{{ else }}Sem mensagens ainda{{ end }}</p>
+            </div>
+          </a>
+          {{ else }}
+          <div class="p-3 text-secondary">Sem chats ativos. Adicione um contato pelo QR no perfil.</div>
           {{ end }}
-
-          <hr>
-          <div class="d-flex gap-2 align-items-center">
-            <button id="enable-push" class="btn btn-outline-dark btn-sm" type="button">Ativar push</button>
-            <small class="text-secondary" id="push-status">Permita notificações para receber mensagens.</small>
-          </div>
         </div>
-      </div>
+      </aside>
+
+      <section class="messages-main">
+        <header class="messages-main-header">
+          <div>
+            <h2 class="h6 mb-0">{{ if .Messages }}Conversa{{ else }}Selecione uma conversa{{ end }}</h2>
+          </div>
+          <button id="enable-push" class="btn btn-outline-secondary btn-sm" type="button">Ativar push</button>
+        </header>
+
+        <div class="messages-thread" id="messages-thread">
+          {{ range .Messages }}
+          <div class="message-row {{ if eq .SenderID $.User.ID }}outgoing{{ else }}incoming{{ end }}">
+            <article class="message-bubble">
+              <p class="mb-1">{{ .Content }}</p>
+              <small class="message-author">{{ .SenderDisplay }}</small>
+            </article>
+          </div>
+          {{ else }}
+          <div class="empty-chat-state">
+            <i class="bi bi-chat-square-text"></i>
+            <p class="mb-0 text-secondary">Escolha um chat para iniciar a conversa.</p>
+          </div>
+          {{ end }}
+        </div>
+
+        {{ if .ActiveChatID }}
+        <form method="post" action="{{ url "/app/messages/send" }}" class="messages-composer">
+          <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+          {{ range .Chats }}{{ if eq .ChatID $.ActiveChatID }}<input type="hidden" name="target_user_id" value="{{ .ContactUserID }}">{{ end }}{{ end }}
+          <input class="form-control" maxlength="2000" type="text" name="content" placeholder="Digite sua mensagem" required>
+          <button class="btn btn-success" type="submit"><i class="bi bi-send-fill"></i></button>
+        </form>
+        {{ else }}
+        <div class="messages-composer disabled">
+          <input class="form-control" type="text" placeholder="Selecione um chat para enviar mensagens" disabled>
+          <button class="btn btn-success" type="button" disabled><i class="bi bi-send-fill"></i></button>
+        </div>
+        {{ end }}
+
+        <small class="text-secondary px-3 pb-2" id="push-status">Permita notificações para receber mensagens.</small>
+      </section>
     </div>
-  </div>
-</div>
+  </section>
+</main>
 
 <script>
-  const qrForm = document.getElementById('qr-generate-form');
-  const qrResult = document.getElementById('qr-result');
-  qrForm?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const data = new FormData(qrForm);
-    const res = await fetch(qrForm.action, { method: 'POST', body: data, credentials: 'same-origin' });
-    if (!res.ok) {
-      qrResult.textContent = 'Falha ao gerar token QR.';
-      return;
-    }
-    const payload = await res.json();
-    qrResult.innerHTML = `<strong>Token:</strong> ${payload.token}<br><small>Expira em: ${new Date(payload.expires_at).toLocaleTimeString()}</small>`;
-  });
+  const threadEl = document.getElementById('messages-thread');
+  if (threadEl) threadEl.scrollTop = threadEl.scrollHeight;
 
   async function enablePush() {
     const status = document.getElementById('push-status');
@@ -120,5 +115,6 @@
 
   document.getElementById('enable-push')?.addEventListener('click', enablePush);
 </script>
+{{ template "scripts.ejs" . }}
 </body>
 </html>

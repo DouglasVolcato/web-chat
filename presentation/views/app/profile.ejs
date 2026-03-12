@@ -7,7 +7,7 @@
     <div class="container-xl py-4">
       <div class="mb-4">
         <h1 class="fw-bold mb-1">Perfil e conta</h1>
-        <p class="text-secondary mb-0">Atualize seu nome e gerencie sua conta.</p>
+        <p class="text-secondary mb-0">Edite seu perfil, conecte contatos via QR e gerencie sua conta.</p>
       </div>
 
       {{ if .Alert }}
@@ -16,7 +16,7 @@
 
       <div class="row g-4">
         <div class="col-12 col-lg-7">
-          <div class="card border-0 shadow-sm">
+          <div class="card border-0 shadow-sm mb-4">
             <div class="card-body">
               <h2 class="h5 mb-3">Dados do perfil</h2>
               <form method="post" action="{{ url "/app/profile/name" }}" class="d-flex flex-column gap-3">
@@ -31,6 +31,38 @@
                 </div>
                 <div class="d-flex justify-content-end">
                   <button class="btn btn-primary" type="submit">Salvar nome</button>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <div class="card border-0 shadow-sm">
+            <div class="card-body">
+              <h2 class="h5 mb-3">Contatos por QR Code</h2>
+              <p class="text-secondary small">Gere seu QR para compartilhar ou use a câmera para adicionar um contato.</p>
+
+              <div class="d-flex flex-wrap gap-2 mb-3">
+                <button id="generate-qr-btn" class="btn btn-outline-primary" type="button"><i class="bi bi-qr-code"></i> Gerar QR</button>
+                <button id="start-scan-btn" class="btn btn-outline-secondary" type="button"><i class="bi bi-camera"></i> Ler com câmera</button>
+              </div>
+
+              <div id="qr-panel" class="profile-qr-panel d-none">
+                <img id="qr-image" alt="QR Code de contato" class="img-fluid rounded border mb-2" style="max-width:220px;">
+                <div class="small"><strong>Token:</strong> <span id="qr-token-text"></span></div>
+                <div class="small text-secondary">Expira em: <span id="qr-expiry"></span></div>
+              </div>
+
+              <div id="scan-panel" class="profile-scan-panel d-none mt-3">
+                <video id="qr-video" class="w-100 rounded border" autoplay playsinline muted></video>
+                <small id="scan-status" class="d-block text-secondary mt-2">Posicione o QR dentro da câmera.</small>
+              </div>
+
+              <form id="redeem-form" class="mt-3" method="post" action="{{ url "/app/messages/contacts/qr/redeem" }}">
+                <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
+                <label class="form-label fw-semibold" for="qrTokenInput">Token do contato</label>
+                <div class="input-group">
+                  <input id="qrTokenInput" class="form-control" type="text" name="token" placeholder="Cole ou leia o token pelo QR" required>
+                  <button class="btn btn-success" type="submit">Adicionar contato</button>
                 </div>
               </form>
             </div>
@@ -58,6 +90,76 @@
       </div>
     </div>
   </main>
+
+  <script>
+    const qrPanel = document.getElementById('qr-panel');
+    const qrImage = document.getElementById('qr-image');
+    const qrTokenText = document.getElementById('qr-token-text');
+    const qrExpiry = document.getElementById('qr-expiry');
+    const tokenInput = document.getElementById('qrTokenInput');
+
+    document.getElementById('generate-qr-btn')?.addEventListener('click', async () => {
+      const fd = new FormData();
+      fd.append('csrf_token', '{{ .CSRFToken }}');
+      const res = await fetch('{{ url "/app/messages/contacts/qr" }}', { method: 'POST', body: fd, credentials: 'same-origin' });
+      if (!res.ok) {
+        alert('Falha ao gerar QR. Tente novamente.');
+        return;
+      }
+      const payload = await res.json();
+      const qrDataUrl = `https://api.qrserver.com/v1/create-qr-code/?size=280x280&margin=0&data=${encodeURIComponent(payload.token)}`;
+      qrImage.src = qrDataUrl;
+      qrTokenText.textContent = payload.token;
+      qrExpiry.textContent = new Date(payload.expires_at).toLocaleTimeString();
+      qrPanel.classList.remove('d-none');
+    });
+
+    let scannerStream;
+    let scannerTimer;
+
+    async function startScanner() {
+      const scanPanel = document.getElementById('scan-panel');
+      const video = document.getElementById('qr-video');
+      const status = document.getElementById('scan-status');
+      scanPanel.classList.remove('d-none');
+
+      if (!('BarcodeDetector' in window)) {
+        status.textContent = 'Leitor por câmera não suportado neste navegador. Use o campo de token.';
+        return;
+      }
+
+      try {
+        scannerStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        video.srcObject = scannerStream;
+        const detector = new BarcodeDetector({ formats: ['qr_code'] });
+        status.textContent = 'Lendo QR...';
+
+        const loop = async () => {
+          if (!video.videoWidth) return;
+          const codes = await detector.detect(video);
+          if (codes?.[0]?.rawValue) {
+            tokenInput.value = codes[0].rawValue.trim();
+            status.textContent = 'QR lido com sucesso. Token preenchido.';
+            stopScanner();
+          }
+        };
+
+        scannerTimer = setInterval(loop, 550);
+      } catch (err) {
+        status.textContent = 'Não foi possível acessar a câmera. Verifique permissões.';
+      }
+    }
+
+    function stopScanner() {
+      if (scannerTimer) clearInterval(scannerTimer);
+      if (scannerStream) scannerStream.getTracks().forEach(t => t.stop());
+      scannerTimer = null;
+      scannerStream = null;
+    }
+
+    window.addEventListener('beforeunload', stopScanner);
+    document.getElementById('start-scan-btn')?.addEventListener('click', startScanner);
+  </script>
 
   {{ template "scripts.ejs" . }}
 </body>
