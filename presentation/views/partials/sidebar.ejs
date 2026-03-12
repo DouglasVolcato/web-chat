@@ -29,6 +29,10 @@
             <i class="bi bi-credit-card"></i>
             <span>Assinatura</span>
         </a>
+        <a href="{{ url "/app/messages" }}" class="nav-link {{ if eq $current "messages" }}active{{ end }}">
+            <i class="bi bi-chat-left-text"></i>
+            <span>Mensagens</span>
+        </a>
         <a href="{{ url "/app/profile" }}" class="nav-link {{ if eq $current "profile" }}active{{ end }}">
             <i class="bi bi-person"></i>
             <span>Perfil</span>
@@ -73,6 +77,9 @@
             </a>
             <a href="{{ url "/app/chat" }}" class="nav-link {{ if eq $current "chat" }}active{{ end }}">
                 <i class="bi bi-chat-dots"></i> Chat com IA
+            </a>
+            <a href="{{ url "/app/messages" }}" class="nav-link {{ if eq $current "messages" }}active{{ end }}">
+                <i class="bi bi-chat-left-text"></i> Mensagens
             </a>
             <a href="{{ url "/app/profile" }}" class="nav-link {{ if eq $current "profile" }}active{{ end }}">
                 <i class="bi bi-person"></i> Perfil

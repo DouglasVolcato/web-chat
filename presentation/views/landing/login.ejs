@@ -12,12 +12,11 @@
                   <p class="text-secondary">Faça login para acessar sua área segura e somente após instalar o app (PWA).</p>
                 </div>
 
-
                 <div id="install-required" class="alert alert-warning" role="alert">
-                  <strong>Instalação obrigatória:</strong> instale o app para liberar o login.
-                  <div class="mt-2 d-flex gap-2">
+                  <strong>Instalação obrigatória:</strong> instale o app e abra por ele para liberar o login.
+                  <div class="mt-2 d-flex flex-wrap gap-2 align-items-center">
                     <button id="install-app-btn" type="button" class="btn btn-sm btn-dark">Instalar app</button>
-                    <span id="install-status" class="small text-secondary align-self-center">Aguardando instalação…</span>
+                    <span id="install-status" class="small text-secondary align-self-center">Verificando instalação…</span>
                   </div>
                 </div>
 
@@ -50,16 +49,61 @@
       const installBtn = document.getElementById("install-app-btn");
       const installRequired = document.getElementById("install-required");
       const installStatus = document.getElementById("install-status");
+      const googleWrapper = document.getElementById("google-button-wrapper");
+
       let deferredPrompt = null;
+      let googleInitialized = false;
+
+      function isStandaloneMode() {
+        const mql = window.matchMedia;
+        if (!mql) return false;
+
+        const standalone = mql("(display-mode: standalone)").matches;
+        const fullscreen = mql("(display-mode: fullscreen)").matches;
+        const minimalUi = mql("(display-mode: minimal-ui)").matches;
+        const wco = mql("(display-mode: window-controls-overlay)").matches;
+        const iosStandalone = window.navigator.standalone === true;
+        const androidTWA = document.referrer.startsWith("android-app://");
+
+        return standalone || fullscreen || minimalUi || wco || iosStandalone || androidTWA;
+      }
+
+      function setInstallBlocked(reason) {
+        installRequired?.classList.remove("d-none");
+        googleWrapper?.classList.add("d-none");
+
+        if (!installStatus) return;
+
+        if (reason === "no_prompt") {
+          installStatus.textContent = "No celular: menu do navegador > 'Adicionar à tela inicial'. No desktop: menu > 'Instalar aplicativo'.";
+          return;
+        }
+
+        installStatus.textContent = "Instale e abra pelo app para liberar o login.";
+      }
+
+      function setInstallAllowed() {
+        installRequired?.classList.add("d-none");
+        googleWrapper?.classList.remove("d-none");
+        if (installStatus) {
+          installStatus.textContent = "App instalado. Login liberado.";
+        }
+      }
+
+      function refreshInstallGate() {
+        if (isStandaloneMode()) {
+          setInstallAllowed();
+          return true;
+        }
+
+        setInstallBlocked(deferredPrompt ? "pending" : "no_prompt");
+        return false;
+      }
 
       function initGoogle() {
-        if (!checkInstalled()) {
-          return;
-        }
-
-        if (!clientId) {
-          return;
-        }
+        if (googleInitialized) return;
+        if (!refreshInstallGate()) return;
+        if (!clientId) return;
 
         if (!window.google || !window.google.accounts || !window.google.accounts.id) {
           setTimeout(initGoogle, 300);
@@ -70,9 +114,14 @@
           return;
         }
 
+        googleInitialized = true;
+
         window.google.accounts.id.initialize({
           client_id: clientId,
           callback: (response) => {
+            if (!refreshInstallGate()) {
+              return;
+            }
             credentialInput.value = response.credential;
             form.requestSubmit();
           },
@@ -87,45 +136,55 @@
         window.google.accounts.id.prompt();
       }
 
-      initGoogle();
-
-      function enableLogin() {
-        if (installRequired) installRequired.classList.add("d-none");
-        document.getElementById("google-button-wrapper")?.classList.remove("d-none");
-      }
-
-      function checkInstalled() {
-        const standalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
-        if (standalone || localStorage.getItem("pwaInstalled") === "1") {
-          enableLogin();
-          return true;
-        }
-        return false;
-      }
-
       window.addEventListener("beforeinstallprompt", (event) => {
         event.preventDefault();
         deferredPrompt = event;
-        installStatus.textContent = "Pronto para instalar.";
+
+        if (!isStandaloneMode() && installStatus) {
+          installStatus.textContent = "Pronto para instalar. Clique em 'Instalar app'.";
+        }
+
+        refreshInstallGate();
       });
 
       window.addEventListener("appinstalled", () => {
-        localStorage.setItem("pwaInstalled", "1");
-        installStatus.textContent = "App instalado. Login liberado.";
-        enableLogin();
+        deferredPrompt = null;
+        setInstallAllowed();
+        initGoogle();
       });
 
       installBtn?.addEventListener("click", async () => {
-        if (!deferredPrompt) {
-          installStatus.textContent = "Use o menu do navegador e clique em 'Instalar aplicativo'.";
+        if (isStandaloneMode()) {
+          setInstallAllowed();
+          initGoogle();
           return;
         }
+
+        if (!deferredPrompt) {
+          setInstallBlocked("no_prompt");
+          return;
+        }
+
         deferredPrompt.prompt();
-        await deferredPrompt.userChoice;
+        const choice = await deferredPrompt.userChoice;
+        deferredPrompt = null;
+
+        if (choice?.outcome === "accepted") {
+          if (installStatus) installStatus.textContent = "Instalação confirmada. Abra o app instalado para continuar.";
+        } else {
+          if (installStatus) installStatus.textContent = "Instalação cancelada. O login continua bloqueado.";
+        }
+
+        refreshInstallGate();
       });
 
-      checkInstalled();
+      window.addEventListener("focus", refreshInstallGate);
+      document.addEventListener("visibilitychange", () => {
+        if (!document.hidden) refreshInstallGate();
+      });
 
+      refreshInstallGate();
+      initGoogle();
     </script>
   </body>
 </html>
