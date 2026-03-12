@@ -100,7 +100,9 @@
       return;
     }
 
-    const reg = await navigator.serviceWorker.register('{{ url "/sw.js" }}');
+    const swUrl = '{{ url "/sw.js" }}';
+    const swScopeBase = '{{ url "/" }}'.replace(/\/$/, '');
+    const reg = await navigator.serviceWorker.register(swUrl, { scope: `${swScopeBase}/` });
     const sub = await reg.pushManager.subscribe({
       userVisibleOnly: true,
       applicationServerKey: Uint8Array.from(atob(vapidPublicKey.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0))
