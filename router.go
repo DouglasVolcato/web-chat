@@ -116,10 +116,6 @@ func (app *App) router() http.Handler {
 	}
 
 	if basePath != "" {
-		mux.Get(basePath, func(w http.ResponseWriter, r *http.Request) {
-			http.Redirect(w, r, helpers.PathURL("/"), http.StatusPermanentRedirect)
-		})
-
 		mux.Route(basePath, func(r chi.Router) {
 			registerAppRoutes(r)
 		})

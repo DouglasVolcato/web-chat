@@ -45,5 +45,9 @@ func PathURL(path string) string {
 		return path
 	}
 
+	if path == base || strings.HasPrefix(path, base+"/") {
+		return path
+	}
+
 	return base + path
 }
