@@ -8,7 +8,9 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net"
+	"net/http"
 	"strings"
 	"time"
 )
@@ -22,10 +24,11 @@ var (
 type Service struct {
 	repo     Repository
 	notifier PushNotifier
+	logger   *slog.Logger
 }
 
 func NewService(repo Repository, notifier PushNotifier) *Service {
-	return &Service{repo: repo, notifier: notifier}
+	return &Service{repo: repo, notifier: notifier, logger: slog.Default()}
 }
 
 func (s *Service) PurgeExpiredMessages(ctx context.Context, tx *sql.Tx) error {
@@ -44,6 +47,28 @@ func (s *Service) ListMessages(ctx context.Context, tx *sql.Tx, userID, chatID s
 		return nil, err
 	}
 	return s.repo.GetChatMessages(ctx, tx, userID, chatID)
+}
+
+func (s *Service) RegisterPushSubscription(ctx context.Context, tx *sql.Tx, userID, ip string, in PushSubscriptionInput) error {
+	if strings.TrimSpace(in.Endpoint) == "" || strings.TrimSpace(in.P256DH) == "" || strings.TrimSpace(in.Auth) == "" {
+		return errors.New("subscription inválida")
+	}
+	if err := s.repo.SavePushSubscription(ctx, tx, userID, in); err != nil {
+		return err
+	}
+	s.logger.Info("push_subscription_registered", "user_id", userID)
+	return s.repo.InsertAuditLog(ctx, tx, userID, "push.subscription.saved", sanitizeIP(ip), nil)
+}
+
+func (s *Service) RevokePushSubscription(ctx context.Context, tx *sql.Tx, userID, endpoint, ip string) error {
+	if strings.TrimSpace(endpoint) == "" {
+		return errors.New("endpoint obrigatório")
+	}
+	if err := s.repo.RevokePushSubscription(ctx, tx, userID, endpoint); err != nil {
+		return err
+	}
+	s.logger.Info("push_subscription_revoked", "user_id", userID)
+	return s.repo.InsertAuditLog(ctx, tx, userID, "push.subscription.revoked", sanitizeIP(ip), nil)
 }
 
 func (s *Service) SendMessage(ctx context.Context, tx *sql.Tx, senderID, targetID, content, ip string) (string, error) {
@@ -66,14 +91,44 @@ func (s *Service) SendMessage(ctx context.Context, tx *sql.Tx, senderID, targetI
 		return "", err
 	}
 
-	if s.notifier != nil {
-		subs, _ := s.repo.ListActivePushSubscriptions(ctx, tx, targetID)
-		senderName, _ := s.repo.GetUserDisplayName(ctx, tx, senderID)
-		_ = s.notifier.NotifyMessage(ctx, subs, defaultIfEmpty(senderName, "Nova mensagem"), content, chatID)
-	}
-
+	s.trySendPush(ctx, tx, senderID, targetID, chatID, content)
 	_ = s.repo.InsertAuditLog(ctx, tx, senderID, "message.sent", sanitizeIP(ip), map[string]any{"chat_id": chatID, "target_user_id": targetID})
 	return chatID, nil
+}
+
+func (s *Service) trySendPush(ctx context.Context, tx *sql.Tx, senderID, targetID, chatID, content string) {
+	if s.notifier == nil {
+		return
+	}
+	subs, err := s.repo.ListActivePushSubscriptions(ctx, tx, targetID)
+	if err != nil {
+		s.logger.Error("push_send_failed", "reason", err.Error())
+		return
+	}
+	if len(subs) == 0 {
+		return
+	}
+	senderName, _ := s.repo.GetUserDisplayName(ctx, tx, senderID)
+	payload := PushPayload{Title: defaultIfEmpty(senderName, "Nova mensagem"), Body: content, Tag: "chat:" + chatID, ChatID: chatID, URL: "/app/messages/" + chatID, Timestamp: time.Now().UnixMilli(), SenderName: senderName}
+	s.logger.Info("push_send_started", "chat_id", chatID, "subscriptions", len(subs))
+
+	for _, sub := range subs {
+		status, err := s.notifier.NotifyMessage(ctx, sub, payload)
+		if err != nil {
+			s.logger.Error("push_send_failed", "chat_id", chatID, "error", err.Error())
+			continue
+		}
+		if status == http.StatusGone || status == http.StatusNotFound {
+			_ = s.repo.InvalidatePushSubscription(ctx, tx, targetID, sub.Endpoint)
+			s.logger.Warn("push_subscription_invalidated", "chat_id", chatID)
+			continue
+		}
+		if status >= 200 && status < 300 {
+			s.logger.Info("push_send_succeeded", "chat_id", chatID)
+			continue
+		}
+		s.logger.Error("push_send_failed", "chat_id", chatID, "status", status)
+	}
 }
 
 func (s *Service) GenerateContactQR(ctx context.Context, tx *sql.Tx, ownerID, ip string) (*QRToken, error) {
@@ -107,16 +162,6 @@ func (s *Service) RedeemContactQR(ctx context.Context, tx *sql.Tx, userID, token
 	return chatID, nil
 }
 
-func (s *Service) SavePushSubscription(ctx context.Context, tx *sql.Tx, userID, ip string, in PushSubscriptionInput) error {
-	if strings.TrimSpace(in.Endpoint) == "" || strings.TrimSpace(in.P256DH) == "" || strings.TrimSpace(in.Auth) == "" {
-		return errors.New("subscription inválida")
-	}
-	if err := s.repo.SavePushSubscription(ctx, tx, userID, in); err != nil {
-		return err
-	}
-	return s.repo.InsertAuditLog(ctx, tx, userID, "push.subscription.saved", sanitizeIP(ip), nil)
-}
-
 func (s *Service) DeleteAccount(ctx context.Context, tx *sql.Tx, userID, ip string) error {
 	if err := s.repo.DeleteUserAccount(ctx, tx, userID); err != nil {
 		return err
@@ -125,8 +170,8 @@ func (s *Service) DeleteAccount(ctx context.Context, tx *sql.Tx, userID, ip stri
 }
 
 func hashToken(token string) string {
-	s := sha256.Sum256([]byte(strings.TrimSpace(token)))
-	return fmt.Sprintf("%x", s[:])
+	sum := sha256.Sum256([]byte(strings.TrimSpace(token)))
+	return fmt.Sprintf("%x", sum[:])
 }
 
 func generateSecureToken() (string, string, error) {

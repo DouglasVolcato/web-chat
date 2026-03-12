@@ -36,8 +36,15 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 		router.Post("/send", helpers.AuthDecorator(h.sendMessage))
 		router.Post("/contacts/qr", helpers.AuthDecorator(h.generateQR))
 		router.Post("/contacts/qr/redeem", helpers.AuthDecorator(h.redeemQR))
-		router.Post("/push/subscribe", helpers.AuthDecorator(h.savePushSubscription))
 		router.Post("/account/delete", helpers.AuthDecorator(h.deleteAccount))
+	})
+
+	r.Route("/app/push", func(router chi.Router) {
+		router.Use(httprate.LimitByIP(40, time.Minute))
+		router.Use(helpers.UserRateLimit(80, time.Minute))
+		router.Post("/subscriptions", helpers.AuthDecorator(h.registerPushSubscription))
+		router.Delete("/subscriptions", helpers.AuthDecorator(h.deletePushSubscription))
+		router.Post("/test", helpers.AuthDecorator(h.pushTest))
 	})
 
 	r.With(httprate.LimitByIP(10, time.Minute)).Post("/internal/tasks/expire-messages", h.expireMessages)
@@ -55,13 +62,7 @@ func (h *Handler) listChatsPage(w http.ResponseWriter, r *http.Request) {
 		helpers.RenderErrorPage(w, helpers.ErrorPageData{Title: "Erro", Message: err.Error(), Path: r.URL.Path})
 		return
 	}
-	_ = helpers.Render(w, filepath.Join("app", "messages.ejs"), map[string]any{
-		"User":             user,
-		"Chats":            items,
-		"CSRFToken":        helpers.EnsureCSRFToken(w, r),
-		"VAPIDPublicKey":   strings.TrimSpace(os.Getenv("VAPID_PUBLIC_KEY")),
-		"NotificationHint": strings.TrimSpace(r.URL.Query().Get("notice")),
-	})
+	_ = helpers.Render(w, filepath.Join("app", "messages.ejs"), map[string]any{"User": user, "Chats": items, "CSRFToken": helpers.EnsureCSRFToken(w, r), "VAPIDPublicKey": strings.TrimSpace(os.Getenv("VAPID_PUBLIC_KEY"))})
 }
 
 func (h *Handler) chatPage(w http.ResponseWriter, r *http.Request) {
@@ -82,14 +83,7 @@ func (h *Handler) chatPage(w http.ResponseWriter, r *http.Request) {
 		helpers.RenderErrorPage(w, helpers.ErrorPageData{Title: "Erro", Message: err.Error(), Path: r.URL.Path})
 		return
 	}
-	_ = helpers.Render(w, filepath.Join("app", "messages.ejs"), map[string]any{
-		"User":           user,
-		"Chats":          items,
-		"Messages":       msgs,
-		"ActiveChatID":   chatID,
-		"CSRFToken":      helpers.EnsureCSRFToken(w, r),
-		"VAPIDPublicKey": strings.TrimSpace(os.Getenv("VAPID_PUBLIC_KEY")),
-	})
+	_ = helpers.Render(w, filepath.Join("app", "messages.ejs"), map[string]any{"User": user, "Chats": items, "Messages": msgs, "ActiveChatID": chatID, "CSRFToken": helpers.EnsureCSRFToken(w, r), "VAPIDPublicKey": strings.TrimSpace(os.Getenv("VAPID_PUBLIC_KEY"))})
 }
 
 func (h *Handler) sendMessage(w http.ResponseWriter, r *http.Request) {
@@ -113,6 +107,80 @@ func (h *Handler) sendMessage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	helpers.Redirect(w, r, "/app/messages/"+chatID)
+}
+
+func (h *Handler) registerPushSubscription(w http.ResponseWriter, r *http.Request) {
+	if !helpers.ValidateCSRFToken(r) {
+		http.Error(w, "token CSRF inválido", http.StatusForbidden)
+		return
+	}
+	ctx, tx, done, user, err := authTx(r)
+	if err != nil {
+		helpers.RenderUnauthorized(w, r)
+		return
+	}
+	defer done()
+	var payload struct {
+		Endpoint    string                        `json:"endpoint"`
+		Keys        struct{ P256DH, Auth string } `json:"keys"`
+		DeviceLabel string                        `json:"device_label"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		http.Error(w, "payload inválido", http.StatusBadRequest)
+		return
+	}
+	err = h.service.RegisterPushSubscription(ctx, tx, user.ID, r.RemoteAddr, PushSubscriptionInput{Endpoint: payload.Endpoint, P256DH: payload.Keys.P256DH, Auth: payload.Keys.Auth, Device: payload.DeviceLabel, UserAgent: r.UserAgent()})
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) deletePushSubscription(w http.ResponseWriter, r *http.Request) {
+	if !helpers.ValidateCSRFToken(r) {
+		http.Error(w, "token CSRF inválido", http.StatusForbidden)
+		return
+	}
+	ctx, tx, done, user, err := authTx(r)
+	if err != nil {
+		helpers.RenderUnauthorized(w, r)
+		return
+	}
+	defer done()
+	endpoint := strings.TrimSpace(r.URL.Query().Get("endpoint"))
+	if endpoint == "" {
+		endpoint = strings.TrimSpace(r.FormValue("endpoint"))
+	}
+	if err := h.service.RevokePushSubscription(ctx, tx, user.ID, endpoint, r.RemoteAddr); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handler) pushTest(w http.ResponseWriter, r *http.Request) {
+	if !helpers.ValidateCSRFToken(r) {
+		http.Error(w, "token CSRF inválido", http.StatusForbidden)
+		return
+	}
+	ctx, tx, done, user, err := authTx(r)
+	if err != nil {
+		helpers.RenderUnauthorized(w, r)
+		return
+	}
+	defer done()
+	subs, err := h.service.repo.ListActivePushSubscriptions(ctx, tx, user.ID)
+	if err != nil || len(subs) == 0 {
+		http.Error(w, "sem subscriptions", http.StatusBadRequest)
+		return
+	}
+	status, sendErr := h.service.notifier.NotifyMessage(ctx, subs[0], PushPayload{Title: "Teste", Body: "Push de teste", ChatID: "", URL: "/app/messages", Timestamp: time.Now().UnixMilli()})
+	if sendErr != nil {
+		http.Error(w, sendErr.Error(), http.StatusBadGateway)
+		return
+	}
+	w.WriteHeader(status)
 }
 
 func (h *Handler) generateQR(w http.ResponseWriter, r *http.Request) {
@@ -152,32 +220,6 @@ func (h *Handler) redeemQR(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	helpers.Redirect(w, r, "/app/messages/"+chatID)
-}
-
-func (h *Handler) savePushSubscription(w http.ResponseWriter, r *http.Request) {
-	ctx, tx, done, user, err := authTx(r)
-	if err != nil {
-		helpers.RenderUnauthorized(w, r)
-		return
-	}
-	defer done()
-	var payload struct {
-		Endpoint string `json:"endpoint"`
-		Keys     struct {
-			P256DH string `json:"p256dh"`
-			Auth   string `json:"auth"`
-		} `json:"keys"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
-		http.Error(w, "payload inválido", http.StatusBadRequest)
-		return
-	}
-	err = h.service.SavePushSubscription(ctx, tx, user.ID, r.RemoteAddr, PushSubscriptionInput{Endpoint: payload.Endpoint, P256DH: payload.Keys.P256DH, Auth: payload.Keys.Auth})
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	w.WriteHeader(http.StatusNoContent)
 }
 
 func (h *Handler) deleteAccount(w http.ResponseWriter, r *http.Request) {

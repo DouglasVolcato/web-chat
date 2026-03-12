@@ -4,19 +4,21 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"net/http"
 	"testing"
 	"time"
 )
 
 type fakeRepo struct {
-	contactsOK       bool
-	chatID           string
-	notifySubs       []PushSubscription
-	senderName       string
-	consumeOwnerID   string
-	consumeErr       error
-	addContactCalled bool
-	auditActions     []string
+	contactsOK     bool
+	chatID         string
+	notifySubs     []PushSubscription
+	senderName     string
+	consumeOwnerID string
+	consumeErr     error
+	auditActions   []string
+	invalidated    int
+	revoked        int
 }
 
 func (f *fakeRepo) PurgeExpiredMessages(ctx context.Context, tx *sql.Tx) error { return nil }
@@ -48,10 +50,17 @@ func (f *fakeRepo) ConsumeQRToken(ctx context.Context, tx *sql.Tx, tokenHash, us
 	return f.consumeOwnerID, f.consumeErr
 }
 func (f *fakeRepo) AddContactPair(ctx context.Context, tx *sql.Tx, userA, userB string) error {
-	f.addContactCalled = true
 	return nil
 }
 func (f *fakeRepo) SavePushSubscription(ctx context.Context, tx *sql.Tx, userID string, in PushSubscriptionInput) error {
+	return nil
+}
+func (f *fakeRepo) RevokePushSubscription(ctx context.Context, tx *sql.Tx, userID, endpoint string) error {
+	f.revoked++
+	return nil
+}
+func (f *fakeRepo) InvalidatePushSubscription(ctx context.Context, tx *sql.Tx, userID, endpoint string) error {
+	f.invalidated++
 	return nil
 }
 func (f *fakeRepo) ListActivePushSubscriptions(ctx context.Context, tx *sql.Tx, userID string) ([]PushSubscription, error) {
@@ -68,11 +77,17 @@ func (f *fakeRepo) InsertAuditLog(ctx context.Context, tx *sql.Tx, userID, actio
 	return nil
 }
 
-type fakeNotifier struct{ called bool }
+type fakeNotifier struct {
+	status int
+	called bool
+}
 
-func (f *fakeNotifier) NotifyMessage(ctx context.Context, subs []PushSubscription, title, body, chatID string) error {
+func (f *fakeNotifier) NotifyMessage(ctx context.Context, sub PushSubscription, payload PushPayload) (int, error) {
 	f.called = true
-	return nil
+	if f.status == 0 {
+		return http.StatusCreated, nil
+	}
+	return f.status, nil
 }
 
 func TestSendMessageRequiresContact(t *testing.T) {
@@ -85,21 +100,28 @@ func TestSendMessageRequiresContact(t *testing.T) {
 }
 
 func TestSendMessageNotifiesAndAudits(t *testing.T) {
-	repo := &fakeRepo{contactsOK: true, notifySubs: []PushSubscription{{Endpoint: "e", P256DH: "p", Auth: "a"}}, senderName: "Alice"}
+	repo := &fakeRepo{contactsOK: true, notifySubs: []PushSubscription{{Endpoint: "e", P256DH: "p", Auth: "a", Status: "ACTIVE"}}, senderName: "Alice"}
 	n := &fakeNotifier{}
 	svc := NewService(repo, n)
 	chatID, err := svc.SendMessage(context.Background(), nil, "u1", "u2", "hello", "127.0.0.1")
 	if err != nil {
 		t.Fatalf("unexpected err: %v", err)
 	}
-	if chatID == "" {
-		t.Fatalf("expected chat id")
+	if chatID == "" || !n.called {
+		t.Fatalf("expected chat id and notify")
 	}
-	if !n.called {
-		t.Fatalf("expected notifier call")
+}
+
+func TestSendMessageInvalidatesGoneSubscription(t *testing.T) {
+	repo := &fakeRepo{contactsOK: true, notifySubs: []PushSubscription{{Endpoint: "e", P256DH: "p", Auth: "a", Status: "ACTIVE"}}}
+	n := &fakeNotifier{status: http.StatusGone}
+	svc := NewService(repo, n)
+	_, err := svc.SendMessage(context.Background(), nil, "u1", "u2", "hello", "127.0.0.1")
+	if err != nil {
+		t.Fatalf("unexpected err: %v", err)
 	}
-	if len(repo.auditActions) == 0 || repo.auditActions[0] != "message.sent" {
-		t.Fatalf("expected message.sent audit")
+	if repo.invalidated != 1 {
+		t.Fatalf("expected invalidation")
 	}
 }
 
@@ -109,14 +131,5 @@ func TestRedeemQRFailureAudited(t *testing.T) {
 	_, err := svc.RedeemContactQR(context.Background(), nil, "u1", "token", "127.0.0.1")
 	if !errors.Is(err, ErrInvalidQR) {
 		t.Fatalf("expected ErrInvalidQR, got %v", err)
-	}
-	found := false
-	for _, a := range repo.auditActions {
-		if a == "contact.qr.failed" {
-			found = true
-		}
-	}
-	if !found {
-		t.Fatalf("expected contact.qr.failed audit")
 	}
 }

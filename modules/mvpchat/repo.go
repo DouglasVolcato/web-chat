@@ -21,6 +21,8 @@ type Repository interface {
 	ConsumeQRToken(ctx context.Context, tx *sql.Tx, tokenHash, usedBy string, now time.Time) (string, error)
 	AddContactPair(ctx context.Context, tx *sql.Tx, userA, userB string) error
 	SavePushSubscription(ctx context.Context, tx *sql.Tx, userID string, in PushSubscriptionInput) error
+	RevokePushSubscription(ctx context.Context, tx *sql.Tx, userID, endpoint string) error
+	InvalidatePushSubscription(ctx context.Context, tx *sql.Tx, userID, endpoint string) error
 	ListActivePushSubscriptions(ctx context.Context, tx *sql.Tx, userID string) ([]PushSubscription, error)
 	GetUserDisplayName(ctx context.Context, tx *sql.Tx, userID string) (string, error)
 	DeleteUserAccount(ctx context.Context, tx *sql.Tx, userID string) error
@@ -108,12 +110,7 @@ func (r *PostgresRepository) AreContacts(ctx context.Context, tx *sql.Tx, userID
 }
 
 func (r *PostgresRepository) GetOrCreateDirectChat(ctx context.Context, tx *sql.Tx, userA, userB string) (string, error) {
-	row := models.QueryRowContext(tx, ctx, `
-		select p1.chat_id from chat_participants p1
-		join chat_participants p2 on p2.chat_id = p1.chat_id
-		where p1.user_id = $1 and p2.user_id = $2
-		limit 1
-	`, userA, userB)
+	row := models.QueryRowContext(tx, ctx, `select p1.chat_id from chat_participants p1 join chat_participants p2 on p2.chat_id = p1.chat_id where p1.user_id=$1 and p2.user_id=$2 limit 1`, userA, userB)
 	var chatID string
 	if err := row.Scan(&chatID); err == nil {
 		return chatID, nil
@@ -138,12 +135,7 @@ func (r *PostgresRepository) CreateQRToken(ctx context.Context, tx *sql.Tx, owne
 }
 
 func (r *PostgresRepository) ConsumeQRToken(ctx context.Context, tx *sql.Tx, tokenHash, usedBy string, now time.Time) (string, error) {
-	row := models.QueryRowContext(tx, ctx, `
-		update qr_tokens
-		set used_by_user_id=$2, used_at=$3
-		where token_hash=$1 and used_at is null and expires_at > $3
-		returning owner_user_id
-	`, tokenHash, usedBy, now)
+	row := models.QueryRowContext(tx, ctx, `update qr_tokens set used_by_user_id=$2, used_at=$3 where token_hash=$1 and used_at is null and expires_at > $3 returning owner_user_id`, tokenHash, usedBy, now)
 	var owner string
 	if err := row.Scan(&owner); err != nil {
 		return "", err
@@ -152,24 +144,32 @@ func (r *PostgresRepository) ConsumeQRToken(ctx context.Context, tx *sql.Tx, tok
 }
 
 func (r *PostgresRepository) AddContactPair(ctx context.Context, tx *sql.Tx, userA, userB string) error {
-	_, err := models.ExecContext(tx, ctx, `
-		insert into contacts(user_id,contact_user_id) values ($1,$2),($2,$1)
-		on conflict do nothing
-	`, userA, userB)
+	_, err := models.ExecContext(tx, ctx, `insert into contacts(user_id,contact_user_id) values ($1,$2),($2,$1) on conflict do nothing`, userA, userB)
 	return err
 }
 
 func (r *PostgresRepository) SavePushSubscription(ctx context.Context, tx *sql.Tx, userID string, in PushSubscriptionInput) error {
 	_, err := models.ExecContext(tx, ctx, `
-		insert into push_subscriptions(user_id, endpoint, p256dh, auth)
-		values ($1,$2,$3,$4)
-		on conflict(user_id, endpoint) do update set p256dh=excluded.p256dh, auth=excluded.auth, deleted_at=null
-	`, userID, in.Endpoint, in.P256DH, in.Auth)
+		insert into push_subscriptions(user_id, endpoint, p256dh, auth, status, user_agent_hash, device_label, last_seen_at, revoked_at)
+		values ($1,$2,$3,$4,'ACTIVE',nullif($5,''),nullif($6,''),now(),null)
+		on conflict(user_id, endpoint)
+		do update set p256dh=excluded.p256dh, auth=excluded.auth, status='ACTIVE', user_agent_hash=excluded.user_agent_hash, device_label=excluded.device_label, last_seen_at=now(), revoked_at=null
+	`, userID, in.Endpoint, in.P256DH, in.Auth, in.UserAgent, in.Device)
+	return err
+}
+
+func (r *PostgresRepository) RevokePushSubscription(ctx context.Context, tx *sql.Tx, userID, endpoint string) error {
+	_, err := models.ExecContext(tx, ctx, `update push_subscriptions set status='REVOKED', revoked_at=now() where user_id=$1 and endpoint=$2`, userID, endpoint)
+	return err
+}
+
+func (r *PostgresRepository) InvalidatePushSubscription(ctx context.Context, tx *sql.Tx, userID, endpoint string) error {
+	_, err := models.ExecContext(tx, ctx, `update push_subscriptions set status='INVALID', revoked_at=now() where user_id=$1 and endpoint=$2 and status='ACTIVE'`, userID, endpoint)
 	return err
 }
 
 func (r *PostgresRepository) ListActivePushSubscriptions(ctx context.Context, tx *sql.Tx, userID string) ([]PushSubscription, error) {
-	rows, err := models.QueryContext(tx, ctx, `select endpoint, p256dh, auth from push_subscriptions where user_id = $1 and deleted_at is null`, userID)
+	rows, err := models.QueryContext(tx, ctx, `select endpoint,p256dh,auth,status,coalesce(revoked_at,to_timestamp(0)) from push_subscriptions where user_id=$1 and status='ACTIVE' and revoked_at is null`, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -177,7 +177,7 @@ func (r *PostgresRepository) ListActivePushSubscriptions(ctx context.Context, tx
 	items := make([]PushSubscription, 0)
 	for rows.Next() {
 		var s PushSubscription
-		if err := rows.Scan(&s.Endpoint, &s.P256DH, &s.Auth); err != nil {
+		if err := rows.Scan(&s.Endpoint, &s.P256DH, &s.Auth, &s.Status, &s.RevokedAt); err != nil {
 			return nil, err
 		}
 		items = append(items, s)
@@ -186,7 +186,7 @@ func (r *PostgresRepository) ListActivePushSubscriptions(ctx context.Context, tx
 }
 
 func (r *PostgresRepository) GetUserDisplayName(ctx context.Context, tx *sql.Tx, userID string) (string, error) {
-	row := models.QueryRowContext(tx, ctx, `select name from users where id = $1 and deleted_at is null`, userID)
+	row := models.QueryRowContext(tx, ctx, `select name from users where id=$1 and deleted_at is null`, userID)
 	var name string
 	if err := row.Scan(&name); err != nil {
 		return "", err
@@ -195,13 +195,13 @@ func (r *PostgresRepository) GetUserDisplayName(ctx context.Context, tx *sql.Tx,
 }
 
 func (r *PostgresRepository) DeleteUserAccount(ctx context.Context, tx *sql.Tx, userID string) error {
-	if _, err := models.ExecContext(tx, ctx, `update sessions set revoked_at = now() where user_id = $1 and revoked_at is null`, userID); err != nil {
+	if _, err := models.ExecContext(tx, ctx, `update sessions set revoked_at=now() where user_id=$1 and revoked_at is null`, userID); err != nil {
 		return err
 	}
-	if _, err := models.ExecContext(tx, ctx, `update push_subscriptions set deleted_at = now() where user_id = $1 and deleted_at is null`, userID); err != nil {
+	if _, err := models.ExecContext(tx, ctx, `update push_subscriptions set status='REVOKED', revoked_at=now() where user_id=$1 and status='ACTIVE'`, userID); err != nil {
 		return err
 	}
-	if _, err := models.ExecContext(tx, ctx, `update users set deleted_at=now(), email=concat('deleted+',id,'@anon.local'), name='Conta excluída' where id = $1 and deleted_at is null`, userID); err != nil {
+	if _, err := models.ExecContext(tx, ctx, `update users set deleted_at=now(), email=concat('deleted+',id,'@anon.local'), name='Conta excluída' where id=$1 and deleted_at is null`, userID); err != nil {
 		return err
 	}
 	return nil

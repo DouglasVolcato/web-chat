@@ -13,14 +13,14 @@ self.addEventListener('fetch', (event) => {
 });
 
 self.addEventListener('push', (event) => {
-  let data = { title: 'Nova mensagem', body: 'Você recebeu uma mensagem', url: '/app/messages' };
+  let data = { title: 'Nova mensagem', body: 'Você recebeu uma mensagem', chat_id: '', url: '/app/messages' };
   try {
     data = { ...data, ...(event.data?.json?.() || {}) };
   } catch (_) {}
 
   event.waitUntil(self.registration.showNotification(data.title, {
     body: data.body,
-    data: { url: data.url || '/app/messages' },
+    data: { url: data.url || '/app/messages', chat_id: data.chat_id || '' },
     badge: '/icons/logo.png',
     icon: '/icons/logo.png'
   }));

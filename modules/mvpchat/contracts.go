@@ -27,13 +27,27 @@ type QRToken struct {
 }
 
 type PushSubscriptionInput struct {
-	Endpoint string
-	P256DH   string
-	Auth     string
+	Endpoint  string
+	P256DH    string
+	Auth      string
+	Device    string
+	UserAgent string
 }
 
 type PushSubscription struct {
-	Endpoint string
-	P256DH   string
-	Auth     string
+	Endpoint  string
+	P256DH    string
+	Auth      string
+	Status    string
+	RevokedAt time.Time
+}
+
+type PushPayload struct {
+	Title      string `json:"title"`
+	Body       string `json:"body"`
+	Tag        string `json:"tag"`
+	ChatID     string `json:"chat_id"`
+	URL        string `json:"url"`
+	Timestamp  int64  `json:"timestamp"`
+	SenderName string `json:"sender_name,omitempty"`
 }

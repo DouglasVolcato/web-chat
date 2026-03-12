@@ -106,10 +106,10 @@
       applicationServerKey: Uint8Array.from(atob(vapidPublicKey.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0))
     });
 
-    const save = await fetch('{{ url "/app/messages/push/subscribe" }}', {
+    const save = await fetch('{{ url "/app/push/subscriptions" }}', {
       method: 'POST',
       credentials: 'same-origin',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '{{ .CSRFToken }}' },
       body: JSON.stringify(sub)
     });
 
