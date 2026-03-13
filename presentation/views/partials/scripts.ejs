@@ -326,8 +326,20 @@
 
         // Standard Form Submissions (non-HTMX)
         document.addEventListener('submit', (e) => {
+          if (e.defaultPrevented) {
+            return;
+          }
+
           const form = e.target;
-          if (form.tagName === 'FORM' && !form.hasAttribute('hx-post') && !form.hasAttribute('hx-get') && !form.hasAttribute('hx-put') && !form.hasAttribute('hx-patch') && !form.hasAttribute('hx-delete')) {
+          if (
+            form.tagName === 'FORM' &&
+            !form.hasAttribute('hx-post') &&
+            !form.hasAttribute('hx-get') &&
+            !form.hasAttribute('hx-put') &&
+            !form.hasAttribute('hx-patch') &&
+            !form.hasAttribute('hx-delete') &&
+            !form.hasAttribute('data-no-global-loader')
+          ) {
             showLoader();
           }
         });

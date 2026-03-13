@@ -102,7 +102,7 @@
       </div>
 
       <!-- Manual token input -->
-      <form id="redeem-form" method="post" action="{{ url "/app/messages/contacts/qr/redeem" }}" class="wa-token-form">
+      <form id="redeem-form" method="post" action="{{ url "/app/messages/contacts/qr/redeem" }}" class="wa-token-form" data-no-global-loader>
         <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
         <label class="wa-form-label" for="qrTokenInput">Ou cole o token manualmente</label>
         <div class="wa-token-input-row">
