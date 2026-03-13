@@ -180,6 +180,10 @@
   const sidebar = document.getElementById('wa-sidebar');
   document.getElementById('back-to-list-btn')?.addEventListener('click', () => sidebar?.classList.add('show'));
   const mobileMedia = window.matchMedia('(max-width: 991.98px)');
+  const userAgent = String(navigator.userAgent || '');
+  const isIOS = /iPhone|iPad|iPod/i.test(userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  const shouldStabilizeIOSKeyboard = isIOS && isStandalone;
 
   const syncViewportHeight = () => {
     const viewportHeight = window.visualViewport?.height || window.innerHeight;
@@ -205,6 +209,11 @@
 
   // Send with Enter
   const msgInput = document.getElementById('message-input');
+  const pinIOSViewport = () => {
+    if (!shouldStabilizeIOSKeyboard) return;
+    window.requestAnimationFrame(() => window.scrollTo(0, 0));
+  };
+
   if (msgInput) {
     msgInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
@@ -213,8 +222,10 @@
       }
     });
     msgInput.addEventListener('focus', () => {
+      pinIOSViewport();
       window.setTimeout(() => {
         if (threadEl) threadEl.scrollTop = threadEl.scrollHeight;
+        pinIOSViewport();
       }, 150);
     });
     if (!mobileMedia.matches) {
@@ -226,12 +237,13 @@
     syncViewportHeight();
     if (!msgInput || document.activeElement !== msgInput) return;
     window.setTimeout(() => {
-      msgInput.scrollIntoView({ block: 'nearest' });
       if (threadEl) threadEl.scrollTop = threadEl.scrollHeight;
+      pinIOSViewport();
     }, 120);
   };
 
   window.visualViewport?.addEventListener('resize', keepConversationVisible);
+  window.visualViewport?.addEventListener('scroll', pinIOSViewport);
 
   const renderEmptyChatList = () => `
     <div class="wa-empty-list">
