@@ -94,10 +94,7 @@
       <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
       {{ range .Chats }}{{ if eq .ChatID $.ActiveChatID }}<input type="hidden" name="target_user_id" value="{{ .ContactUserID }}">{{ end }}{{ end }}
       <div class="wa-composer-inner">
-        <button class="wa-icon-btn wa-emoji-btn" type="button" title="Emoji">
-          <i class="bi bi-emoji-smile"></i>
-        </button>
-        <input class="wa-composer-input" maxlength="2000" type="text" name="content" placeholder="Mensagem" required autocomplete="off" id="message-input">
+        <input class="wa-composer-input" maxlength="2000" type="text" name="content" placeholder="" required autocomplete="off" id="message-input">
         <button class="wa-send-btn" type="submit" title="Enviar">
           <i class="bi bi-send-fill"></i>
         </button>

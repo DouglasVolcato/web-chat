@@ -2054,7 +2054,6 @@ footer.app-footer {
     display: flex;
     flex-direction: column;
     gap: 0.35rem;
-    max-width: 900px;
     margin: 0 auto;
 }
 
