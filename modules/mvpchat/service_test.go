@@ -94,10 +94,12 @@ func (f *fakeRepo) InsertAuditLog(ctx context.Context, tx *sql.Tx, userID, actio
 type fakeNotifier struct {
 	status int
 	called bool
+	payload PushPayload
 }
 
 func (f *fakeNotifier) NotifyMessage(ctx context.Context, sub PushSubscription, payload PushPayload) (int, error) {
 	f.called = true
+	f.payload = payload
 	if f.status == 0 {
 		return http.StatusCreated, nil
 	}
@@ -126,6 +128,33 @@ func TestSendMessageNotifiesAndAudits(t *testing.T) {
 	}
 	if repo.trimCalls != 1 || repo.trimKeep != maxMessagesPerChat {
 		t.Fatalf("expected trim to keep %d messages, got calls=%d keep=%d", maxMessagesPerChat, repo.trimCalls, repo.trimKeep)
+	}
+	if n.payload.Body != "hello" {
+		t.Fatalf("expected push body to include message content, got %q", n.payload.Body)
+	}
+	if n.payload.ChatID != chatID {
+		t.Fatalf("expected push chat id %q, got %q", chatID, n.payload.ChatID)
+	}
+	if n.payload.URL != "/app/messages/"+chatID {
+		t.Fatalf("expected deep-link URL, got %q", n.payload.URL)
+	}
+}
+
+func TestSummarizePushMessage(t *testing.T) {
+	if got := summarizePushMessage("   "); got != "Voce recebeu uma nova mensagem." {
+		t.Fatalf("unexpected fallback body: %q", got)
+	}
+
+	long := ""
+	for i := 0; i < 130; i++ {
+		long += "a"
+	}
+	got := summarizePushMessage(long)
+	if len([]rune(got)) != 120 {
+		t.Fatalf("expected 120 runes, got %d", len([]rune(got)))
+	}
+	if got == "" || []rune(got)[len([]rune(got))-1] != '…' {
+		t.Fatalf("expected ellipsis at end, got %q", got)
 	}
 }
 
