@@ -2316,9 +2316,8 @@ footer.app-footer {
 
 .wa-settings-wrapper {
     max-width: 1000px;
-    margin: 0 auto;
-    height: 100vh;
-    height: 100dvh;
+    margin: var(--wa-app-top-offset) auto 0;
+    height: calc(var(--wa-viewport-height) - var(--wa-app-top-offset));
     overflow-y: auto;
     background: var(--sf-bg-surface);
     border-left: 1px solid var(--sf-border);
