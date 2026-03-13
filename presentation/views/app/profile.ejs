@@ -52,6 +52,26 @@
       </form>
     </section>
 
+    <section class="wa-settings-section">
+      <h3 class="wa-settings-section-title">
+        <i class="bi bi-share-fill"></i>
+        Compartilhe o app
+      </h3>
+      <p class="wa-settings-section-desc">Envie este link para seus amigos entrarem no Web Chat.</p>
+      <div class="wa-share-row">
+        <input
+          id="share-app-url"
+          class="wa-form-input wa-share-input"
+          type="text"
+          value="{{ .ShareURL }}"
+          readonly
+          aria-label="Link para compartilhar o aplicativo">
+        <button id="copy-app-link-btn" class="wa-btn wa-btn--outline" type="button">
+          <i class="bi bi-link-45deg"></i> Copiar link
+        </button>
+      </div>
+    </section>
+
     <!-- QR Code Section -->
     <section class="wa-settings-section" id="qr-section">
       <h3 class="wa-settings-section-title">
@@ -291,6 +311,24 @@
       btn.innerHTML = '<i class="bi bi-check-lg"></i>';
       setTimeout(() => { btn.innerHTML = '<i class="bi bi-clipboard"></i>'; }, 2000);
     });
+  });
+
+  document.getElementById('copy-app-link-btn')?.addEventListener('click', async () => {
+    const shareInput = document.getElementById('share-app-url');
+    const shareURL = shareInput?.value?.trim();
+    if (!shareURL) {
+      showToast('Link do aplicativo indisponível no momento.');
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(shareURL);
+      showToast('Link copiado com sucesso.', 'success');
+    } catch (error) {
+      shareInput?.focus();
+      shareInput?.select();
+      showToast('Não foi possível copiar automaticamente. Selecione e copie o link.');
+    }
   });
 
   // QR Scanner

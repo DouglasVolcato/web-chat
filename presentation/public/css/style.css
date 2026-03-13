@@ -2601,6 +2601,22 @@ footer.app-footer {
     font-size: 0.82rem;
 }
 
+.wa-share-row {
+    display: flex;
+    gap: 0.65rem;
+    align-items: stretch;
+}
+
+.wa-share-input {
+    flex: 1;
+}
+
+@media (max-width: 500px) {
+    .wa-share-row {
+        flex-direction: column;
+    }
+}
+
 /* --- WA QR Code Section --- */
 .wa-qr-actions {
     display: flex;

@@ -143,16 +143,18 @@ func (app *App) router() http.Handler {
 		})
 	}
 
-	// Payment Module
-	if app.DB == nil {
-		fmt.Println("CRITICAL: app.DB is nil during router initialization!")
-	}
+	if observability.LogsEnabled() {
+		// Payment Module
+		if app.DB == nil {
+			fmt.Println("CRITICAL: app.DB is nil during router initialization!")
+		}
 
-	fmt.Println("Registered Routes:")
-	chi.Walk(mux, func(method string, route string, handler http.Handler, middlewares ...func(http.Handler) http.Handler) error {
-		fmt.Printf("[%s]: '%s'\n", method, route)
-		return nil
-	})
+		fmt.Println("Registered Routes:")
+		chi.Walk(mux, func(method string, route string, handler http.Handler, middlewares ...func(http.Handler) http.Handler) error {
+			fmt.Printf("[%s]: '%s'\n", method, route)
+			return nil
+		})
+	}
 
 	return mux
 }

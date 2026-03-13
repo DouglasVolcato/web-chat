@@ -2,6 +2,7 @@ package main
 
 import (
 	"app/models"
+	"app/observability"
 	"context"
 	"database/sql"
 	"fmt"
@@ -21,6 +22,7 @@ type App struct {
 func main() {
 	app := App{}
 	_ = godotenv.Load(".env")
+	observability.ConfigureRuntimeLogging()
 
 	err := models.ConnectToDB()
 	defer func() {
@@ -46,7 +48,9 @@ func main() {
 		Handler: app.router(),
 	}
 
-	fmt.Printf("Server runnning on http://localhost:%s", os.Getenv("PORT"))
+	if observability.LogsEnabled() {
+		fmt.Printf("Server runnning on http://localhost:%s", os.Getenv("PORT"))
+	}
 
 	err = srv.ListenAndServe()
 	if err != nil {

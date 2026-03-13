@@ -3,8 +3,10 @@ package observability
 import (
 	"io"
 	"log"
+	"log/slog"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 )
 
@@ -25,7 +27,22 @@ var (
 
 // DebugLoggingEnabled indicates whether debug logging should run based on APP_ENV.
 func DebugLoggingEnabled() bool {
-	return false
+	return LogsEnabled()
+}
+
+// LogsEnabled indicates whether application logs should be emitted.
+func LogsEnabled() bool {
+	return strings.EqualFold(strings.TrimSpace(os.Getenv("APP_ENV")), "dev")
+}
+
+// ConfigureRuntimeLogging disables the default Go loggers outside of development.
+func ConfigureRuntimeLogging() {
+	if LogsEnabled() {
+		return
+	}
+
+	log.SetOutput(io.Discard)
+	slog.SetDefault(slog.New(slog.NewTextHandler(io.Discard, nil)))
 }
 
 func ensureLogDir() error {
@@ -33,6 +50,10 @@ func ensureLogDir() error {
 }
 
 func buildLogger(fileName string) (*log.Logger, error) {
+	if !LogsEnabled() {
+		return log.New(io.Discard, "", 0), nil
+	}
+
 	if err := ensureLogDir(); err != nil {
 		return nil, err
 	}

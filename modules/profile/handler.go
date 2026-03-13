@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"log/slog"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -77,6 +78,7 @@ func (h *Handler) renderProfile(w http.ResponseWriter, r *http.Request) {
 		"CurrentPage": "profile",
 		"Profile":     profile,
 		"Alert":       alert,
+		"ShareURL":    resolveShareURL(r),
 		"CSRFToken":   helpers.EnsureCSRFToken(w, r),
 	})
 	if err != nil {
@@ -170,6 +172,7 @@ func (h *Handler) renderProfileWithAlert(w http.ResponseWriter, r *http.Request,
 		"CurrentPage": "profile",
 		"Profile":     profile,
 		"Alert":       alert,
+		"ShareURL":    resolveShareURL(r),
 		"CSRFToken":   helpers.EnsureCSRFToken(w, r),
 	})
 	if err != nil {
@@ -196,4 +199,31 @@ func (h *Handler) handlePageError(w http.ResponseWriter, r *http.Request, title 
 		Message: appErr.Message,
 		Path:    r.URL.Path,
 	})
+}
+
+func resolveShareURL(r *http.Request) string {
+	baseURL := strings.TrimSpace(os.Getenv("APP_BASE_URL"))
+	if baseURL != "" {
+		return strings.TrimRight(baseURL, "/")
+	}
+
+	scheme := "https"
+	if strings.EqualFold(strings.TrimSpace(os.Getenv("APP_ENV")), "dev") {
+		scheme = "http"
+	}
+	if forwardedProto := strings.TrimSpace(r.Header.Get("X-Forwarded-Proto")); forwardedProto != "" {
+		scheme = forwardedProto
+	} else if r.TLS == nil && scheme != "https" {
+		scheme = "http"
+	}
+
+	host := strings.TrimSpace(r.Header.Get("X-Forwarded-Host"))
+	if host == "" {
+		host = strings.TrimSpace(r.Host)
+	}
+	if host == "" {
+		return ""
+	}
+
+	return scheme + "://" + host + strings.TrimRight(helpers.PathURL("/"), "/")
 }
