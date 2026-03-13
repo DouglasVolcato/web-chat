@@ -185,6 +185,10 @@
   const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
   const shouldStabilizeIOSKeyboard = isIOS && isStandalone;
 
+  if (shouldStabilizeIOSKeyboard) {
+    document.body.classList.add('wa-ios-standalone-chat');
+  }
+
   const syncViewportHeight = () => {
     const viewportHeight = window.visualViewport?.height || window.innerHeight;
     root.style.setProperty('--wa-viewport-height', `${Math.round(viewportHeight)}px`);
@@ -209,10 +213,6 @@
 
   // Send with Enter
   const msgInput = document.getElementById('message-input');
-  const pinIOSViewport = () => {
-    if (!shouldStabilizeIOSKeyboard) return;
-    window.requestAnimationFrame(() => window.scrollTo(0, 0));
-  };
 
   if (msgInput) {
     msgInput.addEventListener('keydown', (e) => {
