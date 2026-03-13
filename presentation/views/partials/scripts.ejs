@@ -56,16 +56,174 @@
 
       (() => {
         const bannerId = "pwa-install-banner";
+        const modalId = "pwa-install-modal";
         let deferredPrompt = null;
 
         const supportsInstallBanner = () => "Notification" in window && "serviceWorker" in navigator;
         const isStandaloneMode = () =>
           window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
-        const isMobile = () => /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        const manualInstructions = () =>
-          isMobile()
-            ? "Para receber notificações, abra o menu do navegador e use 'Adicionar à tela inicial'."
-            : "Para receber notificações, abra o menu do navegador e escolha 'Instalar aplicativo'.";
+        const isAndroidMobile = () => /Android/i.test(navigator.userAgent);
+        const isIOS = () =>
+          /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+          (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+        const hasAndroidInstallPrompt = () => isAndroidMobile() && deferredPrompt;
+
+        const bannerCopy = () => {
+          if (hasAndroidInstallPrompt()) {
+            return {
+              help: "Instale o app neste Android para ativar notificações.",
+              button: '<i class="bi bi-download"></i><span>Instalar app</span>',
+            };
+          }
+
+          if (isIOS()) {
+            return {
+              help: "No iPhone, instale pelo Safari para receber notificações.",
+              button: '<i class="bi bi-info-circle"></i><span>Como instalar</span>',
+            };
+          }
+
+          if (isAndroidMobile()) {
+            return {
+              help: "Se o botão de instalar não aparecer, veja o passo a passo do Android.",
+              button: '<i class="bi bi-info-circle"></i><span>Como instalar</span>',
+            };
+          }
+
+          return {
+            help: "No computador, instale pelo menu do navegador para receber notificações.",
+            button: '<i class="bi bi-info-circle"></i><span>Como instalar</span>',
+          };
+        };
+
+        const installExperience = () => {
+          if (hasAndroidInstallPrompt()) {
+            return {
+              title: "Instalar no Android",
+              body: `
+                <p class="mb-3">Instale o app neste Android para liberar notificações push neste dispositivo.</p>
+                <ol class="wa-install-modal__steps">
+                  <li>Toque no botão abaixo para abrir o instalador do navegador.</li>
+                  <li>Confirme a instalação.</li>
+                  <li>Abra o app instalado e então ative as notificações.</li>
+                </ol>
+              `,
+              actionLabel: "Instalar app",
+            };
+          }
+
+          if (isIOS()) {
+            return {
+              title: "Como instalar no iPhone",
+              body: `
+                <p class="mb-3">No iPhone, a instalação precisa ser feita pelo Safari.</p>
+                <ol class="wa-install-modal__steps">
+                  <li>Abra este site no Safari.</li>
+                  <li>Toque no botão <strong>Compartilhar</strong>.</li>
+                  <li>Escolha <strong>Adicionar à Tela de Início</strong>.</li>
+                  <li>Confirme em <strong>Adicionar</strong> e abra o app instalado.</li>
+                </ol>
+              `,
+            };
+          }
+
+          if (isAndroidMobile()) {
+            return {
+              title: "Como instalar no Android",
+              body: `
+                <p class="mb-3">Se o prompt automático não aparecer, instale manualmente pelo navegador.</p>
+                <ol class="wa-install-modal__steps">
+                  <li>Abra o menu do navegador.</li>
+                  <li>Toque em <strong>Instalar app</strong> ou <strong>Adicionar à tela inicial</strong>.</li>
+                  <li>Confirme a instalação e abra o app instalado.</li>
+                </ol>
+              `,
+            };
+          }
+
+          return {
+            title: "Como instalar no computador",
+            body: `
+              <p class="mb-3">No desktop, instale pelo menu do navegador para receber notificações.</p>
+              <ol class="wa-install-modal__steps">
+                <li>No Chrome ou Edge, abra o menu do navegador.</li>
+                <li>Clique em <strong>Instalar aplicativo</strong> ou em <strong>Apps</strong>.</li>
+                <li>Abra o app instalado e então ative as notificações.</li>
+              </ol>
+            `,
+          };
+        };
+
+        const ensureModal = () => {
+          let modal = document.getElementById(modalId);
+          if (modal) return modal;
+
+          modal = document.createElement("div");
+          modal.id = modalId;
+          modal.className = "modal fade";
+          modal.tabIndex = -1;
+          modal.setAttribute("aria-hidden", "true");
+          modal.innerHTML = `
+            <div class="modal-dialog modal-dialog-centered">
+              <div class="modal-content border-0 shadow-lg">
+                <div class="modal-header">
+                  <h5 class="modal-title" data-install-modal-title></h5>
+                  <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body" data-install-modal-body></div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Fechar</button>
+                  <button type="button" class="btn btn-dark d-none" data-install-modal-action></button>
+                </div>
+              </div>
+            </div>
+          `;
+
+          document.body.appendChild(modal);
+          return modal;
+        };
+
+        const openInstallModal = () => {
+          const modalEl = ensureModal();
+          const titleEl = modalEl.querySelector("[data-install-modal-title]");
+          const bodyEl = modalEl.querySelector("[data-install-modal-body]");
+          const actionBtn = modalEl.querySelector("[data-install-modal-action]");
+          const experience = installExperience();
+          if (!titleEl || !bodyEl || !actionBtn) return;
+
+          titleEl.textContent = experience.title;
+          bodyEl.innerHTML = experience.body;
+
+          if (experience.actionLabel) {
+            actionBtn.classList.remove("d-none");
+            actionBtn.textContent = experience.actionLabel;
+            actionBtn.onclick = async () => {
+              if (!deferredPrompt) return;
+
+              const modal = window.bootstrap?.Modal.getInstance(modalEl);
+              modal?.hide();
+
+              deferredPrompt.prompt();
+              const choice = await deferredPrompt.userChoice;
+              deferredPrompt = null;
+
+              const banner = document.getElementById(bannerId);
+              const help = banner?.querySelector("[data-install-help]");
+              if (choice?.outcome === "accepted" && help) {
+                help.textContent = "Conclua a instalação e abra o app para ativar notificações.";
+              } else {
+                syncBanner();
+              }
+            };
+          } else {
+            actionBtn.classList.add("d-none");
+            actionBtn.onclick = null;
+            actionBtn.textContent = "";
+          }
+
+          const modal = window.bootstrap?.Modal.getOrCreateInstance(modalEl);
+          modal?.show();
+        };
 
         const ensureBanner = () => {
           let banner = document.getElementById(bannerId);
@@ -86,29 +244,7 @@
             </div>
           `;
 
-          banner.querySelector("[data-install-app]")?.addEventListener("click", async () => {
-            const help = banner.querySelector("[data-install-help]");
-            const button = banner.querySelector("[data-install-app]");
-            if (!help) return;
-
-            if (!deferredPrompt) {
-              help.textContent = manualInstructions();
-              return;
-            }
-
-            deferredPrompt.prompt();
-            const choice = await deferredPrompt.userChoice;
-            deferredPrompt = null;
-
-            if (choice?.outcome === "accepted") {
-              help.textContent = "Instalação iniciada. Abra o app instalado para ativar as notificações.";
-            } else {
-              help.textContent = manualInstructions();
-              if (button) {
-                button.innerHTML = '<i class="bi bi-info-circle"></i><span>Como instalar</span>';
-              }
-            }
-          });
+          banner.querySelector("[data-install-app]")?.addEventListener("click", openInstallModal);
 
           document.body.prepend(banner);
           return banner;
@@ -127,14 +263,9 @@
           const button = banner.querySelector("[data-install-app]");
           if (!help || !button) return;
 
-          if (deferredPrompt) {
-            help.textContent = "Instale o app para ativar notificações neste dispositivo.";
-            button.innerHTML = '<i class="bi bi-download"></i><span>Instalar app</span>';
-            return;
-          }
-
-          help.textContent = manualInstructions();
-          button.innerHTML = '<i class="bi bi-info-circle"></i><span>Como instalar</span>';
+          const copy = bannerCopy();
+          help.textContent = copy.help;
+          button.innerHTML = copy.button;
         };
 
         window.addEventListener("beforeinstallprompt", (event) => {

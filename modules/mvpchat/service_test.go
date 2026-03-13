@@ -14,8 +14,11 @@ type fakeRepo struct {
 	chatID         string
 	notifySubs     []PushSubscription
 	senderName     string
+	lookupOwnerID  string
+	lookupErr      error
 	consumeOwnerID string
 	consumeErr     error
+	consumeCalls   int
 	auditActions   []string
 	invalidated    int
 	revoked        int
@@ -46,7 +49,11 @@ func (f *fakeRepo) CreateMessage(ctx context.Context, tx *sql.Tx, chatID, sender
 func (f *fakeRepo) CreateQRToken(ctx context.Context, tx *sql.Tx, ownerID, tokenHash string, expiresAt time.Time) error {
 	return nil
 }
+func (f *fakeRepo) LookupActiveQROwner(ctx context.Context, tx *sql.Tx, tokenHash string, now time.Time) (string, error) {
+	return f.lookupOwnerID, f.lookupErr
+}
 func (f *fakeRepo) ConsumeQRToken(ctx context.Context, tx *sql.Tx, tokenHash, usedBy string, now time.Time) (string, error) {
+	f.consumeCalls++
 	return f.consumeOwnerID, f.consumeErr
 }
 func (f *fakeRepo) AddContactPair(ctx context.Context, tx *sql.Tx, userA, userB string) error {
@@ -126,11 +133,24 @@ func TestSendMessageInvalidatesGoneSubscription(t *testing.T) {
 }
 
 func TestRedeemQRFailureAudited(t *testing.T) {
-	repo := &fakeRepo{consumeErr: errors.New("invalid")}
+	repo := &fakeRepo{lookupErr: errors.New("invalid")}
 	svc := NewService(repo, nil)
 	_, err := svc.RedeemContactQR(context.Background(), nil, "u1", "token", "127.0.0.1")
 	if !errors.Is(err, ErrInvalidQR) {
 		t.Fatalf("expected ErrInvalidQR, got %v", err)
+	}
+}
+
+func TestRedeemQROwnCodeDoesNotConsumeToken(t *testing.T) {
+	repo := &fakeRepo{lookupOwnerID: "u1"}
+	svc := NewService(repo, nil)
+
+	_, err := svc.RedeemContactQR(context.Background(), nil, "u1", "token", "127.0.0.1")
+	if !errors.Is(err, ErrOwnQR) {
+		t.Fatalf("expected ErrOwnQR, got %v", err)
+	}
+	if repo.consumeCalls != 0 {
+		t.Fatalf("expected own qr to not be consumed")
 	}
 }
 

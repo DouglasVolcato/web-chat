@@ -21,6 +21,7 @@ var (
 	ErrInvalidMessage = errors.New("mensagem inválida")
 	ErrNotContact     = errors.New("usuário não é seu contato")
 	ErrInvalidQR      = errors.New("qr inválido ou expirado")
+	ErrOwnQR          = errors.New("você não pode usar seu próprio QR Code")
 )
 
 const qrCodeImageSize = 280
@@ -153,9 +154,25 @@ func (s *Service) GenerateContactQR(ctx context.Context, tx *sql.Tx, ownerID, ip
 }
 
 func (s *Service) RedeemContactQR(ctx context.Context, tx *sql.Tx, userID, token, ip string) (string, error) {
+	token = strings.TrimSpace(token)
+	if token == "" {
+		_ = s.repo.InsertAuditLog(ctx, tx, userID, "contact.qr.failed", sanitizeIP(ip), map[string]any{"reason": "empty_token"})
+		return "", ErrInvalidQR
+	}
+
+	now := time.Now().UTC()
 	hash := hashToken(token)
-	ownerID, err := s.repo.ConsumeQRToken(ctx, tx, hash, userID, time.Now().UTC())
-	if err != nil || ownerID == "" || ownerID == userID {
+	ownerID, err := s.repo.LookupActiveQROwner(ctx, tx, hash, now)
+	if err != nil || ownerID == "" {
+		_ = s.repo.InsertAuditLog(ctx, tx, userID, "contact.qr.failed", sanitizeIP(ip), nil)
+		return "", ErrInvalidQR
+	}
+	if ownerID == userID {
+		_ = s.repo.InsertAuditLog(ctx, tx, userID, "contact.qr.failed", sanitizeIP(ip), map[string]any{"reason": "own_qr"})
+		return "", ErrOwnQR
+	}
+	consumedOwnerID, err := s.repo.ConsumeQRToken(ctx, tx, hash, userID, now)
+	if err != nil || consumedOwnerID == "" {
 		_ = s.repo.InsertAuditLog(ctx, tx, userID, "contact.qr.failed", sanitizeIP(ip), nil)
 		return "", ErrInvalidQR
 	}

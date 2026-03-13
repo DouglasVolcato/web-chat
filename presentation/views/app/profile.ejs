@@ -147,6 +147,15 @@
   </div>
 </div>
 
+<div class="toast-container position-fixed end-0 p-3 wa-toast-container">
+  <div id="profile-toast" class="toast border-0 wa-toast" role="status" aria-live="polite" aria-atomic="true">
+    <div class="d-flex">
+      <div class="toast-body" id="profile-toast-body"></div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Fechar"></button>
+    </div>
+  </div>
+</div>
+
 <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 <script>
   const qrPanel = document.getElementById('qr-panel');
@@ -154,6 +163,42 @@
   const qrTokenText = document.getElementById('qr-token-text');
   const qrExpiry = document.getElementById('qr-expiry');
   const tokenInput = document.getElementById('qrTokenInput');
+  const redeemForm = document.getElementById('redeem-form');
+  const profileToast = document.getElementById('profile-toast');
+  const profileToastBody = document.getElementById('profile-toast-body');
+
+  function showToast(message, variant = 'danger') {
+    if (!profileToast || !profileToastBody || !window.bootstrap?.Toast) {
+      alert(message);
+      return;
+    }
+
+    profileToast.classList.remove('text-bg-danger', 'text-bg-success', 'text-bg-warning', 'text-bg-info');
+    profileToast.classList.add(`text-bg-${variant}`);
+    profileToastBody.textContent = message;
+
+    const closeBtn = profileToast.querySelector('.btn-close');
+    if (closeBtn) {
+      closeBtn.classList.toggle('btn-close-white', variant !== 'warning' && variant !== 'light');
+    }
+
+    window.bootstrap.Toast.getOrCreateInstance(profileToast, { delay: 4500 }).show();
+  }
+
+  async function readErrorMessage(response, fallbackMessage) {
+    const contentType = response.headers.get('content-type') || '';
+
+    if (contentType.includes('application/json')) {
+      const payload = await response.json().catch(() => null);
+      if (payload && typeof payload.message === 'string' && payload.message.trim() !== '') {
+        return payload.message.trim();
+      }
+    }
+
+    const text = await response.text().catch(() => '');
+    const normalizedText = text.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    return normalizedText || fallbackMessage;
+  }
 
   function normalizeQRPayload(payload) {
     if (!payload || typeof payload !== 'object') return null;
@@ -188,9 +233,9 @@
       });
       
       if (!res.ok) {
-        const text = await res.text();
-        console.error('Server error:', text);
-        throw new Error(text || 'Falha no servidor');
+        const message = await readErrorMessage(res, 'Falha no servidor');
+        console.error('Server error:', message);
+        throw new Error(message);
       }
       
       const payload = normalizeQRPayload(await res.json());
@@ -212,7 +257,7 @@
       qrPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
     } catch(e) {
       console.error('QR Error:', e);
-      alert('Erro ao gerar QR Code: ' + e.message);
+      showToast('Erro ao gerar QR Code: ' + e.message);
     } finally {
       btn.disabled = false;
       btn.innerHTML = '<i class="bi bi-qr-code"></i> Gerar meu QR';
@@ -261,11 +306,11 @@
         (decodedText, decodedResult) => {
           // Success
           tokenInput.value = decodedText;
-          status.textContent = '✓ QR Code lido com sucesso!';
+          status.textContent = '✓ QR Code lido. Validando contato...';
+          status.classList.remove('wa-scan-status--error');
           status.classList.add('wa-scan-status--success');
           stopScanner();
-          // Auto-focus the add button
-          tokenInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          redeemForm?.requestSubmit();
         },
         (errorMessage) => {
           // Parse error, ignore to keep scanning
@@ -288,6 +333,55 @@
   document.getElementById('stop-scan-btn')?.addEventListener('click', () => {
     stopScanner();
     document.getElementById('scan-panel')?.classList.add('d-none');
+  });
+
+  redeemForm?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+
+    const submitButton = redeemForm.querySelector('button[type="submit"]');
+    const originalLabel = submitButton?.innerHTML || '';
+    if (submitButton) {
+      submitButton.disabled = true;
+      submitButton.innerHTML = '<i class="bi bi-hourglass-split"></i> Validando...';
+    }
+
+    try {
+      const response = await fetch(redeemForm.action, {
+        method: 'POST',
+        body: new FormData(redeemForm),
+        credentials: 'same-origin',
+        headers: {
+          'Accept': 'application/json',
+          'X-Requested-With': 'fetch',
+          'X-CSRF-Token': '{{ .CSRFToken }}'
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(await readErrorMessage(response, 'Não foi possível adicionar o contato.'));
+      }
+
+      const payload = await response.json().catch(() => null);
+      if (!payload || typeof payload.redirect_url !== 'string' || payload.redirect_url.trim() === '') {
+        throw new Error('Resposta inválida ao adicionar o contato.');
+      }
+
+      window.location.assign(payload.redirect_url);
+    } catch (error) {
+      showToast(error.message || 'Não foi possível adicionar o contato.');
+
+      const status = document.getElementById('scan-status');
+      if (status) {
+        status.textContent = error.message || 'Não foi possível adicionar o contato.';
+        status.classList.remove('wa-scan-status--success');
+        status.classList.add('wa-scan-status--error');
+      }
+    } finally {
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.innerHTML = originalLabel;
+      }
+    }
   });
 
   // Delete account confirmation

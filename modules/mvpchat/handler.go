@@ -27,6 +27,11 @@ type Handler struct{ service *Service }
 
 func NewHandler(service *Service) *Handler { return &Handler{service: service} }
 
+type jsonMessageResponse struct {
+	Message     string `json:"message,omitempty"`
+	RedirectURL string `json:"redirect_url,omitempty"`
+}
+
 func (h *Handler) RegisterRoutes(r chi.Router) {
 	r.Route("/app/messages", func(router chi.Router) {
 		router.Use(httprate.LimitByIP(60, time.Minute))
@@ -205,6 +210,10 @@ func (h *Handler) generateQR(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) redeemQR(w http.ResponseWriter, r *http.Request) {
 	if !helpers.ValidateCSRFToken(r) {
+		if wantsJSONResponse(r) {
+			writeJSONResponse(w, http.StatusForbidden, jsonMessageResponse{Message: "token CSRF inválido"})
+			return
+		}
 		http.Error(w, "token CSRF inválido", http.StatusForbidden)
 		return
 	}
@@ -216,7 +225,15 @@ func (h *Handler) redeemQR(w http.ResponseWriter, r *http.Request) {
 	defer done()
 	chatID, err := h.service.RedeemContactQR(ctx, tx, user.ID, strings.TrimSpace(r.FormValue("token")), r.RemoteAddr)
 	if err != nil {
+		if wantsJSONResponse(r) {
+			writeJSONResponse(w, http.StatusBadRequest, jsonMessageResponse{Message: err.Error()})
+			return
+		}
 		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	if wantsJSONResponse(r) {
+		writeJSONResponse(w, http.StatusOK, jsonMessageResponse{RedirectURL: helpers.PathURL("/app/messages/" + chatID)})
 		return
 	}
 	helpers.Redirect(w, r, "/app/messages/"+chatID)
@@ -280,4 +297,18 @@ func authTx(r *http.Request) (context.Context, *sql.Tx, func(), *models.User, er
 		return nil, nil, nil, nil, err
 	}
 	return dbCtx, tx, func() { done(); cancel() }, user, nil
+}
+
+func wantsJSONResponse(r *http.Request) bool {
+	accept := strings.ToLower(strings.TrimSpace(r.Header.Get("Accept")))
+	if strings.Contains(accept, "application/json") {
+		return true
+	}
+	return strings.EqualFold(strings.TrimSpace(r.Header.Get("X-Requested-With")), "fetch")
+}
+
+func writeJSONResponse(w http.ResponseWriter, status int, payload any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(payload)
 }

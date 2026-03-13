@@ -18,6 +18,7 @@ type Repository interface {
 	GetOrCreateDirectChat(ctx context.Context, tx *sql.Tx, userA, userB string) (string, error)
 	CreateMessage(ctx context.Context, tx *sql.Tx, chatID, senderID, content string, expiresAt time.Time) error
 	CreateQRToken(ctx context.Context, tx *sql.Tx, ownerID, tokenHash string, expiresAt time.Time) error
+	LookupActiveQROwner(ctx context.Context, tx *sql.Tx, tokenHash string, now time.Time) (string, error)
 	ConsumeQRToken(ctx context.Context, tx *sql.Tx, tokenHash, usedBy string, now time.Time) (string, error)
 	AddContactPair(ctx context.Context, tx *sql.Tx, userA, userB string) error
 	SavePushSubscription(ctx context.Context, tx *sql.Tx, userID string, in PushSubscriptionInput) error
@@ -132,6 +133,15 @@ func (r *PostgresRepository) CreateMessage(ctx context.Context, tx *sql.Tx, chat
 func (r *PostgresRepository) CreateQRToken(ctx context.Context, tx *sql.Tx, ownerID, tokenHash string, expiresAt time.Time) error {
 	_, err := models.ExecContext(tx, ctx, `insert into qr_tokens(owner_user_id,token_hash,expires_at) values ($1,$2,$3)`, ownerID, tokenHash, expiresAt)
 	return err
+}
+
+func (r *PostgresRepository) LookupActiveQROwner(ctx context.Context, tx *sql.Tx, tokenHash string, now time.Time) (string, error) {
+	row := models.QueryRowContext(tx, ctx, `select owner_user_id from qr_tokens where token_hash=$1 and used_at is null and expires_at > $2`, tokenHash, now)
+	var owner string
+	if err := row.Scan(&owner); err != nil {
+		return "", err
+	}
+	return owner, nil
 }
 
 func (r *PostgresRepository) ConsumeQRToken(ctx context.Context, tx *sql.Tx, tokenHash, usedBy string, now time.Time) (string, error) {

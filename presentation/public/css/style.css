@@ -1388,6 +1388,15 @@ footer.app-footer {
     outline-offset: 2px;
 }
 
+.wa-install-modal__steps {
+    margin: 0;
+    padding-left: 1.2rem;
+}
+
+.wa-install-modal__steps li + li {
+    margin-top: 0.45rem;
+}
+
 #pwa-install-banner h1,
 #pwa-install-banner h2,
 #pwa-install-banner h3,
@@ -2591,6 +2600,28 @@ footer.app-footer {
     width: min(280px, 100%);
     height: auto;
     border-radius: 4px;
+}
+
+.wa-toast-container {
+    z-index: 1085;
+    top: calc(4.75rem + env(safe-area-inset-top, 0px));
+}
+
+.wa-toast {
+    min-width: min(360px, calc(100vw - 2rem));
+}
+
+@media (max-width: 767.98px) {
+    .wa-toast-container {
+        left: 0;
+        right: 0;
+        top: calc(5.5rem + env(safe-area-inset-top, 0px));
+    }
+
+    .wa-toast {
+        min-width: 0;
+        width: calc(100vw - 1.5rem);
+    }
 }
 
 .wa-qr-info {
