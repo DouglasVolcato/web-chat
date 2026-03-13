@@ -2,6 +2,7 @@ package helpers
 
 import (
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 )
@@ -16,12 +17,16 @@ var (
 	userWindows = map[string]userWindow{}
 )
 
-func UserRateLimit(limit int, window time.Duration) func(http.Handler) http.Handler {
+func UserRateLimit(scope string, limit int, window time.Duration) func(http.Handler) http.Handler {
 	if limit <= 0 {
 		limit = 60
 	}
 	if window <= 0 {
 		window = time.Minute
+	}
+	scope = strings.TrimSpace(scope)
+	if scope == "" {
+		scope = "default"
 	}
 
 	return func(next http.Handler) http.Handler {
@@ -34,12 +39,13 @@ func UserRateLimit(limit int, window time.Duration) func(http.Handler) http.Hand
 
 			now := time.Now().UTC()
 			rateMu.Lock()
-			state := userWindows[userID]
+			key := scope + ":" + userID
+			state := userWindows[key]
 			if state.ResetAt.IsZero() || now.After(state.ResetAt) {
 				state = userWindow{Count: 0, ResetAt: now.Add(window)}
 			}
 			state.Count++
-			userWindows[userID] = state
+			userWindows[key] = state
 			rateMu.Unlock()
 
 			if state.Count > limit {

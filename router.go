@@ -75,7 +75,7 @@ func (app *App) router() http.Handler {
 	mux.Use(middleware.RequestID)
 	mux.Use(app.tracingMiddleware)
 	mux.Use(middleware.RedirectSlashes)
-	mux.Use(httprate.LimitByIP(70, time.Minute))
+	mux.Use(httprate.LimitByIP(180, time.Minute))
 	mux.Use(cors.Handler(config))
 
 	basePath := helpers.URLPath()

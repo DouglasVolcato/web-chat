@@ -40,8 +40,8 @@ type chatStateResponse struct {
 
 func (h *Handler) RegisterRoutes(r chi.Router) {
 	r.Route("/app/messages", func(router chi.Router) {
-		router.Use(httprate.LimitByIP(60, time.Minute))
-		router.Use(helpers.UserRateLimit(120, time.Minute))
+		router.Use(httprate.LimitByIP(240, time.Minute))
+		router.Use(helpers.UserRateLimit("mvpchat.messages", 600, time.Minute))
 		router.Get("/", helpers.AuthDecorator(h.listChatsPage))
 		router.Get("/state", helpers.AuthDecorator(h.chatState))
 		router.Get("/{chatID}", helpers.AuthDecorator(h.chatPage))
@@ -52,8 +52,8 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 	})
 
 	r.Route("/app/push", func(router chi.Router) {
-		router.Use(httprate.LimitByIP(40, time.Minute))
-		router.Use(helpers.UserRateLimit(80, time.Minute))
+		router.Use(httprate.LimitByIP(120, time.Minute))
+		router.Use(helpers.UserRateLimit("mvpchat.push", 240, time.Minute))
 		router.Post("/subscriptions", helpers.AuthDecorator(h.registerPushSubscription))
 		router.Delete("/subscriptions", helpers.AuthDecorator(h.deletePushSubscription))
 		router.Post("/test", helpers.AuthDecorator(h.pushTest))
