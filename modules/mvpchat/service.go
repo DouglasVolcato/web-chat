@@ -25,6 +25,7 @@ var (
 )
 
 const qrCodeImageSize = 280
+const maxMessagesPerChat = 15
 
 type Service struct {
 	repo     Repository
@@ -92,7 +93,10 @@ func (s *Service) SendMessage(ctx context.Context, tx *sql.Tx, senderID, targetI
 	if err != nil {
 		return "", err
 	}
-	if err := s.repo.CreateMessage(ctx, tx, chatID, senderID, content, time.Now().UTC().Add(24*time.Hour)); err != nil {
+	if err := s.repo.CreateMessage(ctx, tx, chatID, senderID, content, time.Now().UTC().AddDate(20, 0, 0)); err != nil {
+		return "", err
+	}
+	if err := s.repo.TrimChatMessages(ctx, tx, chatID, maxMessagesPerChat); err != nil {
 		return "", err
 	}
 

@@ -22,6 +22,8 @@ type fakeRepo struct {
 	auditActions   []string
 	invalidated    int
 	revoked        int
+	trimCalls      int
+	trimKeep       int
 }
 
 func (f *fakeRepo) PurgeExpiredMessages(ctx context.Context, tx *sql.Tx) error { return nil }
@@ -41,9 +43,14 @@ func (f *fakeRepo) GetOrCreateDirectChat(ctx context.Context, tx *sql.Tx, userA,
 	return f.chatID, nil
 }
 func (f *fakeRepo) CreateMessage(ctx context.Context, tx *sql.Tx, chatID, senderID, content string, expiresAt time.Time) error {
-	if expiresAt.Before(time.Now().UTC().Add(23 * time.Hour)) {
+	if expiresAt.Before(time.Now().UTC().AddDate(10, 0, 0)) {
 		return errors.New("bad expiry")
 	}
+	return nil
+}
+func (f *fakeRepo) TrimChatMessages(ctx context.Context, tx *sql.Tx, chatID string, keep int) error {
+	f.trimCalls++
+	f.trimKeep = keep
 	return nil
 }
 func (f *fakeRepo) CreateQRToken(ctx context.Context, tx *sql.Tx, ownerID, tokenHash string, expiresAt time.Time) error {
@@ -116,6 +123,9 @@ func TestSendMessageNotifiesAndAudits(t *testing.T) {
 	}
 	if chatID == "" || !n.called {
 		t.Fatalf("expected chat id and notify")
+	}
+	if repo.trimCalls != 1 || repo.trimKeep != maxMessagesPerChat {
+		t.Fatalf("expected trim to keep %d messages, got calls=%d keep=%d", maxMessagesPerChat, repo.trimCalls, repo.trimKeep)
 	}
 }
 

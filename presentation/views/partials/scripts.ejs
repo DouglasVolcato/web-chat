@@ -63,11 +63,15 @@
         const supportsInstallBanner = () => "Notification" in window && "serviceWorker" in navigator;
         const isStandaloneMode = () =>
           window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
-        const isAndroidMobile = () => /Android/i.test(navigator.userAgent);
+        const navigatorPlatform = () =>
+          String(navigator.userAgentData?.platform || navigator.platform || navigator.userAgent || "").toLowerCase();
+        const navigatorUA = () => String(navigator.userAgent || "").toLowerCase();
+        const isAndroidMobile = () => navigatorPlatform().includes("android") || navigatorUA().includes("android");
         const isIOS = () =>
           /iPhone|iPad|iPod/i.test(navigator.userAgent) ||
           (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
-        const hasAndroidInstallPrompt = () => isAndroidMobile() && deferredPrompt;
+        const hasAndroidInstallPrompt = () =>
+          isAndroidMobile() && deferredPrompt && typeof deferredPrompt.prompt === "function";
 
         const bannerCopy = () => {
           if (hasAndroidInstallPrompt()) {
@@ -132,7 +136,7 @@
             return {
               title: "Como instalar no Android",
               body: `
-                <p class="mb-3">Se o prompt automático não aparecer, instale manualmente pelo navegador.</p>
+                <p class="mb-3">Android detectado. Se o prompt automático não aparecer, instale manualmente pelo navegador.</p>
                 <ol class="wa-install-modal__steps">
                   <li>Abra o menu do navegador.</li>
                   <li>Toque em <strong>Instalar app</strong> ou <strong>Adicionar à tela inicial</strong>.</li>
