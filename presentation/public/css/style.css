@@ -1639,6 +1639,21 @@ footer.app-footer {
     }
 }
 
+
+.wa-body.wa-ios-standalone-chat {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    overflow: hidden;
+}
+
+.wa-body.wa-ios-standalone-chat .wa-app,
+.wa-body.wa-ios-standalone-chat .wa-main,
+.wa-body.wa-ios-standalone-chat .wa-sidebar {
+    height: var(--wa-viewport-height);
+    max-height: var(--wa-viewport-height);
+}
+
 /* --- WA Avatar --- */
 .wa-avatar {
     width: 48px;

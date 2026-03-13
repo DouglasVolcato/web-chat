@@ -180,6 +180,14 @@
   const sidebar = document.getElementById('wa-sidebar');
   document.getElementById('back-to-list-btn')?.addEventListener('click', () => sidebar?.classList.add('show'));
   const mobileMedia = window.matchMedia('(max-width: 991.98px)');
+  const userAgent = String(navigator.userAgent || '');
+  const isIOS = /iPhone|iPad|iPod/i.test(userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  const shouldStabilizeIOSKeyboard = isIOS && isStandalone;
+
+  if (shouldStabilizeIOSKeyboard) {
+    document.body.classList.add('wa-ios-standalone-chat');
+  }
 
   const syncViewportHeight = () => {
     const viewportHeight = window.visualViewport?.height || window.innerHeight;
@@ -205,6 +213,7 @@
 
   // Send with Enter
   const msgInput = document.getElementById('message-input');
+
   if (msgInput) {
     msgInput.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
@@ -226,7 +235,6 @@
     syncViewportHeight();
     if (!msgInput || document.activeElement !== msgInput) return;
     window.setTimeout(() => {
-      msgInput.scrollIntoView({ block: 'nearest' });
       if (threadEl) threadEl.scrollTop = threadEl.scrollHeight;
     }, 120);
   };
