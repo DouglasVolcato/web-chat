@@ -1,4 +1,4 @@
-const CACHE_NAME = 'web-chat-v3';
+const CACHE_NAME = 'web-chat-v4';
 
 const scopeUrl = new URL(self.registration.scope);
 const basePath = scopeUrl.pathname.endsWith('/') ? scopeUrl.pathname.slice(0, -1) : scopeUrl.pathname;
@@ -39,7 +39,7 @@ self.addEventListener('fetch', (event) => {
 self.addEventListener('push', (event) => {
   let data = {
     title: 'Nova mensagem',
-    body: 'Você recebeu uma mensagem',
+    body: 'Abra o app para ler sua nova mensagem.',
     chat_id: '',
     url: appHomePath
   };
@@ -48,8 +48,7 @@ self.addEventListener('push', (event) => {
     data = { ...data, ...(event.data?.json?.() || {}) };
   } catch (_) {}
 
-  const chatUrl = data.chat_id ? `${basePath}/app/chats/${data.chat_id}` : appHomePath;
-  const notificationUrl = buildScopedUrl(data.url || chatUrl);
+  const notificationUrl = buildScopedUrl(data.url || appHomePath);
   const iconUrl = new URL('icons/logo.png', self.registration.scope).href;
 
   event.waitUntil(self.registration.showNotification(data.title, {
@@ -62,9 +61,7 @@ self.addEventListener('push', (event) => {
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const chatId = event.notification?.data?.chat_id;
-  const fallbackUrl = chatId ? `${basePath}/app/chats/${chatId}` : appHomePath;
-  const targetUrl = buildScopedUrl(event.notification?.data?.url || fallbackUrl);
+  const targetUrl = buildScopedUrl(event.notification?.data?.url || appHomePath);
 
   event.waitUntil((async () => {
     const windows = await clients.matchAll({ type: 'window', includeUncontrolled: true });

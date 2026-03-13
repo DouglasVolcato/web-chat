@@ -114,7 +114,15 @@ func (s *Service) trySendPush(ctx context.Context, tx *sql.Tx, senderID, targetI
 		return
 	}
 	senderName, _ := s.repo.GetUserDisplayName(ctx, tx, senderID)
-	payload := PushPayload{Title: defaultIfEmpty(senderName, "Nova mensagem"), Body: content, Tag: "chat:" + chatID, ChatID: chatID, URL: "/app/messages/" + chatID, Timestamp: time.Now().UnixMilli(), SenderName: senderName}
+	payload := PushPayload{
+		Title:      defaultIfEmpty(senderName, "Nova mensagem"),
+		Body:       "Voce recebeu uma nova mensagem.",
+		Tag:        "messages-inbox",
+		ChatID:     "",
+		URL:        "/app/messages",
+		Timestamp:  time.Now().UnixMilli(),
+		SenderName: senderName,
+	}
 	s.logger.Info("push_send_started", "chat_id", chatID, "subscriptions", len(subs))
 
 	for _, sub := range subs {

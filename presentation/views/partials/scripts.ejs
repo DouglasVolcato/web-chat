@@ -58,6 +58,7 @@
         const bannerId = "pwa-install-banner";
         const modalId = "pwa-install-modal";
         let deferredPrompt = null;
+        let bannerOffsetFrame = null;
 
         const supportsInstallBanner = () => "Notification" in window && "serviceWorker" in navigator;
         const isStandaloneMode = () =>
@@ -247,7 +248,20 @@
           banner.querySelector("[data-install-app]")?.addEventListener("click", openInstallModal);
 
           document.body.prepend(banner);
+          syncAppTopOffset();
           return banner;
+        };
+
+        const syncAppTopOffset = () => {
+          if (bannerOffsetFrame) {
+            window.cancelAnimationFrame(bannerOffsetFrame);
+          }
+
+          bannerOffsetFrame = window.requestAnimationFrame(() => {
+            const banner = document.getElementById(bannerId);
+            const nextOffset = banner ? `${banner.offsetHeight}px` : "0px";
+            document.documentElement.style.setProperty("--wa-app-top-offset", nextOffset);
+          });
         };
 
         const syncBanner = () => {
@@ -255,6 +269,7 @@
 
           if (!supportsInstallBanner() || isStandaloneMode()) {
             existingBanner?.remove();
+            syncAppTopOffset();
             return;
           }
 
@@ -266,6 +281,7 @@
           const copy = bannerCopy();
           help.textContent = copy.help;
           button.innerHTML = copy.button;
+          syncAppTopOffset();
         };
 
         window.addEventListener("beforeinstallprompt", (event) => {
@@ -277,9 +293,11 @@
         window.addEventListener("appinstalled", () => {
           deferredPrompt = null;
           document.getElementById(bannerId)?.remove();
+          syncAppTopOffset();
         });
 
         window.addEventListener("focus", syncBanner);
+        window.addEventListener("resize", syncAppTopOffset);
         document.addEventListener("visibilitychange", () => {
           if (!document.hidden) syncBanner();
         });

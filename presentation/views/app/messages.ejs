@@ -55,11 +55,6 @@
 
   <!-- Right Panel: Active Chat or Welcome -->
   <main class="wa-main">
-    <!-- Mobile Toggle -->
-    <button class="wa-mobile-toggle d-lg-none" type="button" id="open-sidebar-btn">
-      <i class="bi bi-list"></i>
-    </button>
-
     {{ if .ActiveChatID }}
     <!-- Chat Header -->
     <header class="wa-chat-header">
@@ -71,7 +66,6 @@
         <div class="wa-avatar wa-avatar--sm">{{ if gt (len .ContactName) 0 }}{{ slice .ContactName 0 1 }}{{ else }}?{{ end }}</div>
         <div>
           <h2 class="wa-chat-header-name">{{ .ContactName }}</h2>
-          <span class="wa-chat-header-status">online</span>
         </div>
         {{ end }}{{ end }}
       </div>
@@ -89,10 +83,6 @@
         <div class="wa-msg {{ if eq .SenderUserID $.User.ID }}wa-msg--out{{ else }}wa-msg--in{{ end }}">
           <div class="wa-msg-bubble">
             <p class="wa-msg-text">{{ .Content }}</p>
-            <span class="wa-msg-meta">
-              {{ .SenderDisplay }}
-              {{ if eq .SenderUserID $.User.ID }}<i class="bi bi-check2-all"></i>{{ end }}
-            </span>
           </div>
         </div>
         {{ end }}
@@ -146,31 +136,59 @@
 </div>
 
 <script>
+  const activeChatID = "{{ .ActiveChatID }}";
+  const currentUserID = "{{ if .User }}{{ .User.ID }}{{ end }}";
+  const messagesBaseUrl = "{{ url "/app/messages" }}";
+  const messageStateUrl = "{{ url "/app/messages/state" }}";
+  const addContactUrl = "{{ url "/app/profile" }}#qr-section";
+
   // Scroll to bottom of messages
   const threadEl = document.getElementById('messages-thread');
+  const messagesContainer = threadEl?.querySelector('.wa-messages-container');
+  const chatListEl = document.getElementById('chat-list');
   if (threadEl) threadEl.scrollTop = threadEl.scrollHeight;
+
+  const escapeHTML = (value) => String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+
+  const formatTime = (value) => {
+    if (!value) return '';
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  };
 
   // Chat search filter
   const searchInput = document.getElementById('chat-search');
-  if (searchInput) {
-    searchInput.addEventListener('input', () => {
-      const q = searchInput.value.toLowerCase();
-      document.querySelectorAll('.wa-chat-item').forEach(item => {
-        const name = (item.dataset.contactName || '').toLowerCase();
-        item.style.display = name.includes(q) ? '' : 'none';
-      });
+  const applyChatFilter = () => {
+    const q = (searchInput?.value || '').toLowerCase();
+    document.querySelectorAll('.wa-chat-item').forEach((item) => {
+      const name = (item.dataset.contactName || '').toLowerCase();
+      item.style.display = name.includes(q) ? '' : 'none';
     });
-  }
+  };
+  searchInput?.addEventListener('input', applyChatFilter);
 
   // Mobile sidebar toggle
   const sidebar = document.getElementById('wa-sidebar');
-  document.getElementById('open-sidebar-btn')?.addEventListener('click', () => sidebar?.classList.add('show'));
   document.getElementById('back-to-list-btn')?.addEventListener('click', () => sidebar?.classList.add('show'));
+  const mobileMedia = window.matchMedia('(max-width: 991.98px)');
 
-  // Auto-hide sidebar on mobile when chat is active
-  if ("{{ .ActiveChatID }}" !== "" && window.innerWidth < 992 && sidebar) {
-    sidebar.classList.remove('show');
-  }
+  const syncSidebarForViewport = () => {
+    if (!sidebar || !mobileMedia.matches) return;
+    if (activeChatID) {
+      sidebar.classList.remove('show');
+      return;
+    }
+    sidebar.classList.add('show');
+  };
+
+  syncSidebarForViewport();
+  mobileMedia.addEventListener?.('change', syncSidebarForViewport);
 
   // Send with Enter
   const msgInput = document.getElementById('message-input');
@@ -181,7 +199,171 @@
         document.getElementById('message-form')?.requestSubmit();
       }
     });
-    msgInput.focus();
+    msgInput.addEventListener('focus', () => {
+      window.setTimeout(() => {
+        if (threadEl) threadEl.scrollTop = threadEl.scrollHeight;
+      }, 150);
+    });
+    if (!mobileMedia.matches) {
+      msgInput.focus();
+    }
+  }
+
+  const keepConversationVisible = () => {
+    if (!msgInput || document.activeElement !== msgInput) return;
+    window.setTimeout(() => {
+      msgInput.scrollIntoView({ block: 'nearest' });
+      if (threadEl) threadEl.scrollTop = threadEl.scrollHeight;
+    }, 120);
+  };
+
+  window.visualViewport?.addEventListener('resize', keepConversationVisible);
+
+  const renderEmptyChatList = () => `
+    <div class="wa-empty-list">
+      <div class="wa-empty-list-icon">
+        <i class="bi bi-people"></i>
+      </div>
+      <p>Nenhum chat ativo</p>
+      <a href="${addContactUrl}" class="wa-btn wa-btn--primary" style="margin-top: 1rem;">
+        <i class="bi bi-person-plus-fill"></i> Adicionar contato
+      </a>
+    </div>
+  `;
+
+  const renderChatList = (chats) => {
+    if (!chatListEl) return;
+
+    if (!Array.isArray(chats) || chats.length === 0) {
+      chatListEl.innerHTML = renderEmptyChatList();
+      return;
+    }
+
+    chatListEl.innerHTML = chats.map((chat) => {
+      const isActive = chat.chat_id === activeChatID;
+      const rawContactName = String(chat.contact_name || '?');
+      const contactName = escapeHTML(rawContactName);
+      const contactInitial = escapeHTML(rawContactName.trim().charAt(0) || '?');
+      const preview = chat.has_last_message
+        ? escapeHTML(chat.last_message || '')
+        : '<i class="bi bi-chat-dots"></i> Sem mensagens ainda';
+      const time = chat.has_last_message
+        ? `<span class="wa-chat-item-time">${formatTime(chat.last_message_at)}</span>`
+        : '';
+
+      return `
+        <a role="listitem"
+           class="wa-chat-item ${isActive ? 'active' : ''}"
+           href="${messagesBaseUrl}/${chat.chat_id}"
+           data-contact-name="${contactName}">
+          <div class="wa-avatar">${contactInitial}</div>
+          <div class="wa-chat-item-content">
+            <div class="wa-chat-item-top">
+              <strong class="wa-chat-item-name">${contactName}</strong>
+              ${time}
+            </div>
+            <p class="wa-chat-item-preview">${preview}</p>
+          </div>
+        </a>
+      `;
+    }).join('');
+
+    applyChatFilter();
+  };
+
+  const renderMessages = (messages) => {
+    if (!threadEl || !messagesContainer) return;
+
+    const distanceFromBottom = threadEl.scrollHeight - threadEl.scrollTop - threadEl.clientHeight;
+    const shouldStickToBottom = distanceFromBottom < 72;
+
+    messagesContainer.innerHTML = (messages || []).map((message) => `
+      <div class="wa-msg ${message.sender_user_id === currentUserID ? 'wa-msg--out' : 'wa-msg--in'}">
+        <div class="wa-msg-bubble">
+          <p class="wa-msg-text">${escapeHTML(message.content || '')}</p>
+        </div>
+      </div>
+    `).join('');
+
+    if (shouldStickToBottom) {
+      threadEl.scrollTop = threadEl.scrollHeight;
+      return;
+    }
+
+    threadEl.scrollTop = Math.max(0, threadEl.scrollHeight - threadEl.clientHeight - distanceFromBottom);
+  };
+
+  const chatsSignature = (chats) => JSON.stringify((chats || []).map((chat) => [
+    chat.chat_id,
+    chat.last_message,
+    chat.last_message_at,
+    chat.has_last_message,
+  ]));
+
+  const messagesSignature = (messages) => JSON.stringify((messages || []).map((message) => [
+    message.id,
+    message.content,
+    message.created_at,
+  ]));
+
+  let lastChatState = '';
+  let lastMessageState = '';
+  let refreshingState = false;
+
+  const refreshChatState = async () => {
+    if (refreshingState || document.hidden) return;
+
+    refreshingState = true;
+    try {
+      const url = new URL(messageStateUrl, window.location.origin);
+      if (activeChatID) {
+        url.searchParams.set('chat_id', activeChatID);
+      }
+
+      const response = await fetch(url.toString(), {
+        credentials: 'same-origin',
+        headers: {
+          'Accept': 'application/json',
+          'X-Requested-With': 'fetch'
+        }
+      });
+
+      if (!response.ok) {
+        return;
+      }
+
+      const payload = await response.json().catch(() => null);
+      if (!payload) {
+        return;
+      }
+
+      const nextChatState = chatsSignature(payload.chats);
+      if (nextChatState !== lastChatState) {
+        renderChatList(payload.chats || []);
+        lastChatState = nextChatState;
+      }
+
+      if (activeChatID && messagesContainer) {
+        const nextMessageState = messagesSignature(payload.messages);
+        if (nextMessageState !== lastMessageState) {
+          renderMessages(payload.messages || []);
+          lastMessageState = nextMessageState;
+        }
+      }
+    } finally {
+      refreshingState = false;
+    }
+  };
+
+  if (chatListEl) {
+    window.setInterval(refreshChatState, 4000);
+    window.addEventListener('focus', refreshChatState);
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        refreshChatState();
+      }
+    });
+    refreshChatState();
   }
 
   // Push notifications

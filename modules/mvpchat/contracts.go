@@ -3,22 +3,22 @@ package mvpchat
 import "time"
 
 type ChatListItem struct {
-	ChatID         string
-	ContactUserID  string
-	ContactName    string
-	LastMessage    string
-	LastMessageAt  time.Time
-	HasLastMessage bool
+	ChatID         string    `json:"chat_id"`
+	ContactUserID  string    `json:"contact_user_id"`
+	ContactName    string    `json:"contact_name"`
+	LastMessage    string    `json:"last_message"`
+	LastMessageAt  time.Time `json:"last_message_at"`
+	HasLastMessage bool      `json:"has_last_message"`
 }
 
 type Message struct {
-	ID            string
-	ChatID        string
-	SenderUserID  string
-	SenderDisplay string
-	Content       string
-	CreatedAt     time.Time
-	ExpiresAt     time.Time
+	ID            string    `json:"id"`
+	ChatID        string    `json:"chat_id"`
+	SenderUserID  string    `json:"sender_user_id"`
+	SenderDisplay string    `json:"sender_display"`
+	Content       string    `json:"content"`
+	CreatedAt     time.Time `json:"created_at"`
+	ExpiresAt     time.Time `json:"expires_at"`
 }
 
 type QRToken struct {

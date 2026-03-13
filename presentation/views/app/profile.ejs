@@ -123,11 +123,8 @@
       <p class="wa-settings-section-desc">Essa ação é irreversível. Todos os seus dados, mensagens e contatos serão removidos permanentemente.</p>
       <form method="post" action="{{ url "/app/profile/delete" }}" class="wa-settings-form" id="delete-account-form">
         <input type="hidden" name="csrf_token" value="{{ .CSRFToken }}">
-        <div class="wa-form-group">
-          <label for="deleteConfirm" class="wa-form-label">Digite <code>EXCLUIR</code> para confirmar</label>
-          <input id="deleteConfirm" name="confirm" class="wa-form-input wa-form-input--danger" type="text" autocomplete="off" required placeholder="EXCLUIR">
-        </div>
-        <button class="wa-btn wa-btn--danger" type="submit" id="delete-account-btn">
+        <input type="hidden" name="confirm" value="EXCLUIR">
+        <button class="wa-btn wa-btn--danger" type="button" id="delete-account-btn" data-bs-toggle="modal" data-bs-target="#delete-account-modal">
           <i class="bi bi-trash3"></i> Excluir minha conta
         </button>
       </form>
@@ -144,6 +141,27 @@
         {{ template "theme-toggle.ejs" (dict "ThemeButtonClasses" "wa-icon-btn" "ThemeLabelClasses" "wa-theme-label") }}
       </div>
     </section>
+  </div>
+</div>
+
+<div class="modal fade" id="delete-account-modal" tabindex="-1" aria-labelledby="delete-account-modal-title" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header">
+        <h5 class="modal-title" id="delete-account-modal-title">Excluir conta</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+      </div>
+      <div class="modal-body">
+        <p class="mb-2">Sua conta, mensagens e contatos serão removidos permanentemente.</p>
+        <p class="mb-0 text-muted">Essa ação não pode ser desfeita.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="button" class="btn btn-danger" id="confirm-delete-account-btn">
+          <i class="bi bi-trash3"></i> Apagar conta
+        </button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -384,13 +402,11 @@
     }
   });
 
-  // Delete account confirmation
-  document.getElementById('delete-account-form')?.addEventListener('submit', (e) => {
-    const confirm = document.getElementById('deleteConfirm')?.value?.trim();
-    if (confirm !== 'EXCLUIR') {
-      e.preventDefault();
-      alert('Digite EXCLUIR para confirmar.');
-    }
+  document.getElementById('confirm-delete-account-btn')?.addEventListener('click', () => {
+    const form = document.getElementById('delete-account-form');
+    const modalEl = document.getElementById('delete-account-modal');
+    window.bootstrap?.Modal.getInstance(modalEl)?.hide();
+    form?.requestSubmit();
   });
 </script>
 

@@ -32,11 +32,18 @@ type jsonMessageResponse struct {
 	RedirectURL string `json:"redirect_url,omitempty"`
 }
 
+type chatStateResponse struct {
+	Chats      []ChatListItem `json:"chats"`
+	Messages   []Message      `json:"messages,omitempty"`
+	ActiveChat string         `json:"active_chat,omitempty"`
+}
+
 func (h *Handler) RegisterRoutes(r chi.Router) {
 	r.Route("/app/messages", func(router chi.Router) {
 		router.Use(httprate.LimitByIP(60, time.Minute))
 		router.Use(helpers.UserRateLimit(120, time.Minute))
 		router.Get("/", helpers.AuthDecorator(h.listChatsPage))
+		router.Get("/state", helpers.AuthDecorator(h.chatState))
 		router.Get("/{chatID}", helpers.AuthDecorator(h.chatPage))
 		router.Post("/send", helpers.AuthDecorator(h.sendMessage))
 		router.Post("/contacts/qr", helpers.AuthDecorator(h.generateQR))
@@ -89,6 +96,34 @@ func (h *Handler) chatPage(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_ = helpers.Render(w, filepath.Join("app", "messages.ejs"), map[string]any{"User": user, "Chats": items, "Messages": msgs, "ActiveChatID": chatID, "CSRFToken": helpers.EnsureCSRFToken(w, r), "VAPIDPublicKey": strings.TrimSpace(os.Getenv("VAPID_PUBLIC_KEY"))})
+}
+
+func (h *Handler) chatState(w http.ResponseWriter, r *http.Request) {
+	ctx, tx, done, user, err := authTx(r)
+	if err != nil {
+		helpers.RenderUnauthorized(w, r)
+		return
+	}
+	defer done()
+
+	items, err := h.service.ListChats(ctx, tx, user.ID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	activeChatID := strings.TrimSpace(r.URL.Query().Get("chat_id"))
+	response := chatStateResponse{Chats: items, ActiveChat: activeChatID}
+	if activeChatID != "" {
+		msgs, err := h.service.ListMessages(ctx, tx, user.ID, activeChatID)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		response.Messages = msgs
+	}
+
+	writeJSONResponse(w, http.StatusOK, response)
 }
 
 func (h *Handler) sendMessage(w http.ResponseWriter, r *http.Request) {
