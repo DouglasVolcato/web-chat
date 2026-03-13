@@ -3,11 +3,15 @@ package mvpchat
 import (
 	"bytes"
 	"context"
+	"crypto/aes"
+	"crypto/cipher"
 	"crypto/ecdsa"
 	"crypto/elliptic"
+	"crypto/hkdf"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -53,6 +57,10 @@ func (n *WebPushNotifier) NotifyMessage(ctx context.Context, sub PushSubscriptio
 	if err != nil {
 		return 0, err
 	}
+	encryptedBody, err := encryptWebPushPayload(sub, body)
+	if err != nil {
+		return 0, err
+	}
 	aud, err := audienceFromEndpoint(sub.Endpoint)
 	if err != nil {
 		return 0, err
@@ -62,12 +70,13 @@ func (n *WebPushNotifier) NotifyMessage(ctx context.Context, sub PushSubscriptio
 		return 0, err
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, sub.Endpoint, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, sub.Endpoint, bytes.NewReader(encryptedBody))
 	if err != nil {
 		return 0, err
 	}
 	req.Header.Set("TTL", "30")
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Content-Type", "application/octet-stream")
+	req.Header.Set("Content-Encoding", "aes128gcm")
 	req.Header.Set("Authorization", "vapid t="+jwt+", k="+n.publicKey)
 	req.Header.Set("Urgency", "high")
 
@@ -87,6 +96,84 @@ func (n *WebPushNotifier) NotifyMessage(ctx context.Context, sub PushSubscriptio
 	}
 
 	return resp.StatusCode, nil
+}
+
+func encryptWebPushPayload(sub PushSubscription, plaintext []byte) ([]byte, error) {
+	receiverPub, err := base64.RawURLEncoding.DecodeString(strings.TrimSpace(sub.P256DH))
+	if err != nil {
+		return nil, errors.New("chave p256dh inválida")
+	}
+	authSecret, err := base64.RawURLEncoding.DecodeString(strings.TrimSpace(sub.Auth))
+	if err != nil {
+		return nil, errors.New("auth push inválido")
+	}
+	if len(receiverPub) != 65 || receiverPub[0] != 4 {
+		return nil, errors.New("chave p256dh inválida")
+	}
+	rx, ry := elliptic.Unmarshal(elliptic.P256(), receiverPub)
+	if rx == nil || ry == nil {
+		return nil, errors.New("chave p256dh inválida")
+	}
+
+	ephemeralKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return nil, err
+	}
+	senderPub := elliptic.Marshal(elliptic.P256(), ephemeralKey.PublicKey.X, ephemeralKey.PublicKey.Y)
+	sharedX, _ := elliptic.P256().ScalarMult(rx, ry, ephemeralKey.D.Bytes())
+	sharedSecret := sharedX.FillBytes(make([]byte, 32))
+
+	info := append([]byte("WebPush: info\x00"), receiverPub...)
+	info = append(info, senderPub...)
+	ikm := make([]byte, 32)
+	prk, err := hkdf.Extract(sha256.New, sharedSecret, authSecret)
+	if err != nil {
+		return nil, err
+	}
+	ikm, err = hkdf.Expand(sha256.New, prk, string(info), 32)
+	if err != nil {
+		return nil, err
+	}
+
+	salt := make([]byte, 16)
+	if _, err := rand.Read(salt); err != nil {
+		return nil, err
+	}
+	contentPRK, err := hkdf.Extract(sha256.New, ikm, salt)
+	if err != nil {
+		return nil, err
+	}
+	cek, err := hkdf.Expand(sha256.New, contentPRK, "Content-Encoding: aes128gcm\x00", 16)
+	if err != nil {
+		return nil, err
+	}
+	nonce, err := hkdf.Expand(sha256.New, contentPRK, "Content-Encoding: nonce\x00", 12)
+	if err != nil {
+		return nil, err
+	}
+
+	block, err := aes.NewCipher(cek)
+	if err != nil {
+		return nil, err
+	}
+	aead, err := cipher.NewGCM(block)
+	if err != nil {
+		return nil, err
+	}
+	record := append(append([]byte{}, plaintext...), 0x02)
+	ciphertext := aead.Seal(nil, nonce, record, nil)
+
+	const rs uint32 = 4096
+	head := make([]byte, 16+4+1)
+	copy(head[:16], salt)
+	binary.BigEndian.PutUint32(head[16:20], rs)
+	head[20] = byte(len(senderPub))
+
+	packet := make([]byte, 0, len(head)+len(senderPub)+len(ciphertext))
+	packet = append(packet, head...)
+	packet = append(packet, senderPub...)
+	packet = append(packet, ciphertext...)
+	return packet, nil
 }
 
 func audienceFromEndpoint(endpoint string) (string, error) {

@@ -120,10 +120,10 @@ func (s *Service) trySendPush(ctx context.Context, tx *sql.Tx, senderID, targetI
 	senderName, _ := s.repo.GetUserDisplayName(ctx, tx, senderID)
 	payload := PushPayload{
 		Title:      defaultIfEmpty(senderName, "Nova mensagem"),
-		Body:       "Voce recebeu uma nova mensagem.",
-		Tag:        "messages-inbox",
-		ChatID:     "",
-		URL:        "/app/messages",
+		Body:       summarizePushMessage(content),
+		Tag:        "messages-chat-" + chatID,
+		ChatID:     chatID,
+		URL:        "/app/messages/" + chatID,
 		Timestamp:  time.Now().UnixMilli(),
 		SenderName: senderName,
 	}
@@ -146,6 +146,19 @@ func (s *Service) trySendPush(ctx context.Context, tx *sql.Tx, senderID, targetI
 		}
 		s.logger.Error("push_send_failed", "chat_id", chatID, "status", status)
 	}
+}
+
+func summarizePushMessage(content string) string {
+	trimmed := strings.TrimSpace(content)
+	if trimmed == "" {
+		return "Voce recebeu uma nova mensagem."
+	}
+	const maxLen = 120
+	runes := []rune(trimmed)
+	if len(runes) <= maxLen {
+		return trimmed
+	}
+	return string(runes[:maxLen-1]) + "…"
 }
 
 func (s *Service) GenerateContactQR(ctx context.Context, tx *sql.Tx, ownerID, ip string) (*QRToken, error) {
