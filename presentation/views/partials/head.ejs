@@ -33,5 +33,20 @@
           document.documentElement.setAttribute("data-bs-theme", "dark");
         }
       })();
+
+      (() => {
+        if (window.__webChatInstallPromptBootstrapped) return;
+        window.__webChatInstallPromptBootstrapped = true;
+        window.__webChatDeferredInstallPrompt = window.__webChatDeferredInstallPrompt || null;
+
+        window.addEventListener("beforeinstallprompt", (event) => {
+          event.preventDefault();
+          window.__webChatDeferredInstallPrompt = event;
+        });
+
+        window.addEventListener("appinstalled", () => {
+          window.__webChatDeferredInstallPrompt = null;
+        });
+      })();
     </script>
   </head>

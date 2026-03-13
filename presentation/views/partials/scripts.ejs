@@ -59,7 +59,7 @@
         const modalId = "pwa-install-modal";
         const swUrl = '{{ url "/sw.js" }}';
         const swScopeBase = '{{ url "/" }}'.replace(/\/$/, '');
-        let deferredPrompt = null;
+        let deferredPrompt = window.__webChatDeferredInstallPrompt || null;
         let bannerOffsetFrame = null;
         let workerRegistrationPromise = null;
 
@@ -238,6 +238,7 @@
               deferredPrompt.prompt();
               const choice = await deferredPrompt.userChoice;
               deferredPrompt = null;
+              window.__webChatDeferredInstallPrompt = null;
 
               const banner = document.getElementById(bannerId);
               const help = banner?.querySelector("[data-install-help]");
@@ -318,11 +319,13 @@
         window.addEventListener("beforeinstallprompt", (event) => {
           event.preventDefault();
           deferredPrompt = event;
+          window.__webChatDeferredInstallPrompt = event;
           syncBanner();
         });
 
         window.addEventListener("appinstalled", () => {
           deferredPrompt = null;
+          window.__webChatDeferredInstallPrompt = null;
           document.getElementById(bannerId)?.remove();
           syncAppTopOffset();
         });
