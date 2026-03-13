@@ -53,6 +53,112 @@
 
         scrollables.forEach(scrollToBottom);
       });
+
+      (() => {
+        const bannerId = "pwa-install-banner";
+        let deferredPrompt = null;
+
+        const supportsInstallBanner = () => "Notification" in window && "serviceWorker" in navigator;
+        const isStandaloneMode = () =>
+          window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+        const isMobile = () => /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        const manualInstructions = () =>
+          isMobile()
+            ? "Para receber notificações, abra o menu do navegador e use 'Adicionar à tela inicial'."
+            : "Para receber notificações, abra o menu do navegador e escolha 'Instalar aplicativo'.";
+
+        const ensureBanner = () => {
+          let banner = document.getElementById(bannerId);
+          if (banner) return banner;
+
+          banner = document.createElement("div");
+          banner.id = bannerId;
+          banner.innerHTML = `
+            <div class="wa-install-banner__inner">
+              <div class="wa-install-banner__icon" aria-hidden="true">
+                <i class="bi bi-phone"></i>
+              </div>
+              <div class="wa-install-banner__copy">
+                <strong class="wa-install-banner__title">Instale o app se quiser notificações</strong>
+                <span class="wa-install-banner__text" data-install-help></span>
+              </div>
+              <button type="button" class="wa-install-banner__btn" data-install-app></button>
+            </div>
+          `;
+
+          banner.querySelector("[data-install-app]")?.addEventListener("click", async () => {
+            const help = banner.querySelector("[data-install-help]");
+            const button = banner.querySelector("[data-install-app]");
+            if (!help) return;
+
+            if (!deferredPrompt) {
+              help.textContent = manualInstructions();
+              return;
+            }
+
+            deferredPrompt.prompt();
+            const choice = await deferredPrompt.userChoice;
+            deferredPrompt = null;
+
+            if (choice?.outcome === "accepted") {
+              help.textContent = "Instalação iniciada. Abra o app instalado para ativar as notificações.";
+            } else {
+              help.textContent = manualInstructions();
+              if (button) {
+                button.innerHTML = '<i class="bi bi-info-circle"></i><span>Como instalar</span>';
+              }
+            }
+          });
+
+          document.body.prepend(banner);
+          return banner;
+        };
+
+        const syncBanner = () => {
+          const existingBanner = document.getElementById(bannerId);
+
+          if (!supportsInstallBanner() || isStandaloneMode()) {
+            existingBanner?.remove();
+            return;
+          }
+
+          const banner = ensureBanner();
+          const help = banner.querySelector("[data-install-help]");
+          const button = banner.querySelector("[data-install-app]");
+          if (!help || !button) return;
+
+          if (deferredPrompt) {
+            help.textContent = "Instale o app para ativar notificações neste dispositivo.";
+            button.innerHTML = '<i class="bi bi-download"></i><span>Instalar app</span>';
+            return;
+          }
+
+          help.textContent = manualInstructions();
+          button.innerHTML = '<i class="bi bi-info-circle"></i><span>Como instalar</span>';
+        };
+
+        window.addEventListener("beforeinstallprompt", (event) => {
+          event.preventDefault();
+          deferredPrompt = event;
+          syncBanner();
+        });
+
+        window.addEventListener("appinstalled", () => {
+          deferredPrompt = null;
+          document.getElementById(bannerId)?.remove();
+        });
+
+        window.addEventListener("focus", syncBanner);
+        document.addEventListener("visibilitychange", () => {
+          if (!document.hidden) syncBanner();
+        });
+
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", syncBanner, { once: true });
+        } else {
+          syncBanner();
+        }
+      })();
     </script>
 
     <!-- Global Loading Overlay -->

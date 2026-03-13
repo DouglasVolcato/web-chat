@@ -72,7 +72,7 @@
       <!-- Generated QR Panel -->
       <div id="qr-panel" class="wa-qr-panel d-none">
         <div class="wa-qr-image-wrapper">
-          <canvas id="qr-canvas" width="280" height="280"></canvas>
+          <img id="qr-image" src="" alt="Seu QR Code de contato" width="280" height="280">
         </div>
         <div class="wa-qr-info">
           <div class="wa-qr-token-row">
@@ -147,28 +147,27 @@
   </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
 <script>
-  // QR Code generation using qrcode.js
-  function drawQRCode(canvas, data) {
-    QRCode.toCanvas(canvas, data, {
-      width: canvas.width,
-      margin: 2,
-      color: {
-        dark: '#0f766e',
-        light: '#ffffff'
-      }
-    }, function (error) {
-      if (error) console.error(error);
-    });
-  }
-
   const qrPanel = document.getElementById('qr-panel');
-  const qrCanvas = document.getElementById('qr-canvas');
+  const qrImage = document.getElementById('qr-image');
   const qrTokenText = document.getElementById('qr-token-text');
   const qrExpiry = document.getElementById('qr-expiry');
   const tokenInput = document.getElementById('qrTokenInput');
+
+  function normalizeQRPayload(payload) {
+    if (!payload || typeof payload !== 'object') return null;
+
+    const token = typeof payload.token === 'string' ? payload.token.trim() : '';
+    const expiresAt = typeof payload.expires_at === 'string' ? payload.expires_at : '';
+    const imageDataURL = typeof payload.image_data_url === 'string' ? payload.image_data_url : '';
+
+    if (!token || !expiresAt || !imageDataURL) {
+      return null;
+    }
+
+    return { token, expiresAt, imageDataURL };
+  }
 
   document.getElementById('generate-qr-btn')?.addEventListener('click', async () => {
     const btn = document.getElementById('generate-qr-btn');
@@ -194,18 +193,19 @@
         throw new Error(text || 'Falha no servidor');
       }
       
-      const payload = await res.json();
+      const payload = normalizeQRPayload(await res.json());
       console.log('Server response:', payload);
       
-      if (!payload || typeof payload.token === 'undefined') {
-        throw new Error('QR Code info is undefined in server response');
+      if (!payload) {
+        throw new Error('Resposta inválida ao gerar o QR Code');
       }
       
-      // Draw QR on canvas
-      drawQRCode(qrCanvas, payload.token);
-      
+      qrImage.src = payload.imageDataURL;
       qrTokenText.textContent = payload.token;
-      qrExpiry.textContent = new Date(payload.expires_at).toLocaleTimeString('pt-BR');
+      const expiresAt = new Date(payload.expiresAt);
+      qrExpiry.textContent = Number.isNaN(expiresAt.getTime())
+        ? 'em alguns minutos'
+        : expiresAt.toLocaleTimeString('pt-BR');
       qrPanel.classList.remove('d-none');
       
       // Scroll to QR panel
@@ -222,6 +222,7 @@
   // Copy token
   document.getElementById('copy-token-btn')?.addEventListener('click', () => {
     const token = qrTokenText.textContent;
+    if (!token) return;
     navigator.clipboard.writeText(token).then(() => {
       const btn = document.getElementById('copy-token-btn');
       btn.innerHTML = '<i class="bi bi-check-lg"></i>';
@@ -239,6 +240,12 @@
     
     // Scroll to scan panel so user sees the camera
     scanPanel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+    if (typeof Html5Qrcode === 'undefined') {
+      status.textContent = 'Leitor de QR indisponível no momento.';
+      status.classList.add('wa-scan-status--error');
+      return;
+    }
     
     if (!html5QrCode) {
       html5QrCode = new Html5Qrcode("qr-reader");

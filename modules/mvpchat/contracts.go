@@ -22,8 +22,9 @@ type Message struct {
 }
 
 type QRToken struct {
-	Token     string    `json:"token"`
-	ExpiresAt time.Time `json:"expires_at"`
+	Token        string    `json:"token"`
+	ExpiresAt    time.Time `json:"expires_at"`
+	ImageDataURL string    `json:"image_data_url"`
 }
 
 type PushSubscriptionInput struct {

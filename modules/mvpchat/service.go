@@ -13,6 +13,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	qrcode "github.com/skip2/go-qrcode"
 )
 
 var (
@@ -20,6 +22,8 @@ var (
 	ErrNotContact     = errors.New("usuário não é seu contato")
 	ErrInvalidQR      = errors.New("qr inválido ou expirado")
 )
+
+const qrCodeImageSize = 280
 
 type Service struct {
 	repo     Repository
@@ -140,8 +144,12 @@ func (s *Service) GenerateContactQR(ctx context.Context, tx *sql.Tx, ownerID, ip
 	if err := s.repo.CreateQRToken(ctx, tx, ownerID, hash, expires); err != nil {
 		return nil, err
 	}
+	imageDataURL, err := buildQRCodeDataURL(token)
+	if err != nil {
+		return nil, err
+	}
 	_ = s.repo.InsertAuditLog(ctx, tx, ownerID, "contact.qr.generated", sanitizeIP(ip), nil)
-	return &QRToken{Token: token, ExpiresAt: expires}, nil
+	return &QRToken{Token: token, ExpiresAt: expires, ImageDataURL: imageDataURL}, nil
 }
 
 func (s *Service) RedeemContactQR(ctx context.Context, tx *sql.Tx, userID, token, ip string) (string, error) {
@@ -181,6 +189,14 @@ func generateSecureToken() (string, string, error) {
 	}
 	token := base64.RawURLEncoding.EncodeToString(buf)
 	return token, hashToken(token), nil
+}
+
+func buildQRCodeDataURL(data string) (string, error) {
+	png, err := qrcode.Encode(data, qrcode.Medium, qrCodeImageSize)
+	if err != nil {
+		return "", err
+	}
+	return "data:image/png;base64," + base64.StdEncoding.EncodeToString(png), nil
 }
 
 func sanitizeIP(ip string) string {

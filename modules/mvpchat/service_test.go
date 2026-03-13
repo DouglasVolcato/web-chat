@@ -133,3 +133,22 @@ func TestRedeemQRFailureAudited(t *testing.T) {
 		t.Fatalf("expected ErrInvalidQR, got %v", err)
 	}
 }
+
+func TestGenerateQRIncludesImageDataURL(t *testing.T) {
+	repo := &fakeRepo{}
+	svc := NewService(repo, nil)
+
+	qr, err := svc.GenerateContactQR(context.Background(), nil, "u1", "127.0.0.1")
+	if err != nil {
+		t.Fatalf("unexpected err: %v", err)
+	}
+	if qr == nil || qr.Token == "" {
+		t.Fatalf("expected token")
+	}
+	if qr.ImageDataURL == "" {
+		t.Fatalf("expected qr image data url")
+	}
+	if len(qr.ImageDataURL) < len("data:image/png;base64,") || qr.ImageDataURL[:22] != "data:image/png;base64," {
+		t.Fatalf("unexpected qr data url prefix: %q", qr.ImageDataURL)
+	}
+}

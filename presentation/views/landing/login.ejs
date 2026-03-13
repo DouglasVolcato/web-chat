@@ -9,18 +9,11 @@
                 <div class="text-center mb-4">
                   <img src="{{ url "/icons/logo.png" }}" alt="Logo" width="48" height="48" class="mb-2">
                   <h1 class="h4 fw-bold mb-1">Entrar no Web Chat Privado</h1>
-                  <p class="text-secondary">Faça login para acessar sua área segura e somente após instalar o app (PWA).</p>
+                  <p class="text-secondary mb-2">Faça login para acessar sua área segura.</p>
+                  <p class="small text-secondary mb-0">Se quiser receber notificações neste dispositivo, você pode instalar o app depois de entrar.</p>
                 </div>
 
-                <div id="install-required" class="alert alert-warning" role="alert">
-                  <strong>Instalação obrigatória:</strong> instale o app e abra por ele para liberar o login.
-                  <div class="mt-2 d-flex flex-wrap gap-2 align-items-center">
-                    <button id="install-app-btn" type="button" class="btn btn-sm btn-dark">Instalar app</button>
-                    <span id="install-status" class="small text-secondary align-self-center">Verificando instalação…</span>
-                  </div>
-                </div>
-
-                <div id="google-button-wrapper" class="d-flex justify-content-center mb-3 d-none">
+                <div id="google-button-wrapper" class="d-flex justify-content-center mb-3">
                   <div id="google-btn"></div>
                 </div>
 
@@ -46,60 +39,10 @@
       const form = document.getElementById("google-auth-form");
       const credentialInput = document.getElementById("google-credential-input");
       const clientId = "{{ .GoogleClientID }}";
-      const installBtn = document.getElementById("install-app-btn");
-      const installRequired = document.getElementById("install-required");
-      const installStatus = document.getElementById("install-status");
-      const googleWrapper = document.getElementById("google-button-wrapper");
-
-      let deferredPrompt = null;
       let googleInitialized = false;
-
-      function isStandaloneMode() {
-        if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
-          return true;
-        }
-        return false;
-      }
-
-      function isMobile() {
-        return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      }
-
-      function setInstallBlocked(reason) {
-        installRequired?.classList.remove("d-none");
-        googleWrapper?.classList.add("d-none");
-
-        if (!installStatus) return;
-
-        if (reason === "no_prompt") {
-          installStatus.textContent = "No celular: menu do navegador > 'Adicionar à tela inicial'. No desktop: menu > 'Instalar aplicativo'.";
-          return;
-        }
-
-        installStatus.textContent = "Instale e abra pelo app para liberar o login.";
-      }
-
-      function setInstallAllowed() {
-        installRequired?.classList.add("d-none");
-        googleWrapper?.classList.remove("d-none");
-        if (installStatus) {
-          installStatus.textContent = "App instalado. Login liberado.";
-        }
-      }
-
-      function refreshInstallGate() {
-        if (isStandaloneMode()) {
-          setInstallAllowed();
-          return true;
-        }
-
-        setInstallBlocked(deferredPrompt ? "pending" : "no_prompt");
-        return false;
-      }
 
       function initGoogle() {
         if (googleInitialized) return;
-        if (!refreshInstallGate()) return;
         if (!clientId) return;
 
         if (!window.google || !window.google.accounts || !window.google.accounts.id) {
@@ -116,9 +59,6 @@
         window.google.accounts.id.initialize({
           client_id: clientId,
           callback: (response) => {
-            if (!refreshInstallGate()) {
-              return;
-            }
             credentialInput.value = response.credential;
             form.requestSubmit();
           },
@@ -132,53 +72,6 @@
 
         window.google.accounts.id.prompt();
       }
-
-      window.addEventListener("beforeinstallprompt", (event) => {
-        event.preventDefault();
-        deferredPrompt = event;
-
-        refreshInstallGate();
-        initGoogle(); // Re-check if we can show Google button
-      });
-
-      window.addEventListener("appinstalled", () => {
-        deferredPrompt = null;
-        setInstallAllowed();
-        // Delay slightly to ensure browser state is synced
-        setTimeout(initGoogle, 500);
-      });
-
-      installBtn?.addEventListener("click", async () => {
-        if (isStandaloneMode()) {
-          setInstallAllowed();
-          initGoogle();
-          return;
-        }
-
-        if (!deferredPrompt) {
-          setInstallBlocked("no_prompt");
-          return;
-        }
-
-        deferredPrompt.prompt();
-        const choice = await deferredPrompt.userChoice;
-        deferredPrompt = null;
-
-        if (choice?.outcome === "accepted") {
-          if (installStatus) installStatus.textContent = "Instalação confirmada. Abra o app instalado para continuar.";
-        } else {
-          if (installStatus) installStatus.textContent = "Instalação cancelada. O login continua bloqueado.";
-        }
-
-        refreshInstallGate();
-      });
-
-      window.addEventListener("focus", refreshInstallGate);
-      document.addEventListener("visibilitychange", () => {
-        if (!document.hidden) refreshInstallGate();
-      });
-
-      refreshInstallGate();
       initGoogle();
     </script>
   </body>
