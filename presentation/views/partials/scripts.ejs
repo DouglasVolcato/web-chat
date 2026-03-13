@@ -57,8 +57,11 @@
       (() => {
         const bannerId = "pwa-install-banner";
         const modalId = "pwa-install-modal";
+        const swUrl = '{{ url "/sw.js" }}';
+        const swScopeBase = '{{ url "/" }}'.replace(/\/$/, '');
         let deferredPrompt = null;
         let bannerOffsetFrame = null;
+        let workerRegistrationPromise = null;
 
         const supportsInstallBanner = () => "Notification" in window && "serviceWorker" in navigator;
         const isStandaloneMode = () =>
@@ -72,6 +75,30 @@
           (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
         const hasAndroidInstallPrompt = () =>
           isAndroidMobile() && deferredPrompt && typeof deferredPrompt.prompt === "function";
+        const registerPWAWorker = async () => {
+          if (!("serviceWorker" in navigator)) return null;
+          if (workerRegistrationPromise) return workerRegistrationPromise;
+
+          workerRegistrationPromise = navigator.serviceWorker
+            .register(swUrl, {
+              scope: `${swScopeBase}/`,
+              updateViaCache: "none",
+            })
+            .then(async (registration) => {
+              await navigator.serviceWorker.ready;
+              await registration.update().catch(() => {});
+              return registration;
+            })
+            .catch((error) => {
+              workerRegistrationPromise = null;
+              console.error("PWA worker registration error:", error);
+              return null;
+            });
+
+          return workerRegistrationPromise;
+        };
+
+        window.__webChatRegisterPWAWorker = registerPWAWorker;
 
         const bannerCopy = () => {
           if (hasAndroidInstallPrompt()) {
@@ -307,9 +334,17 @@
         });
 
         if (document.readyState === "loading") {
-          document.addEventListener("DOMContentLoaded", syncBanner, { once: true });
+          document.addEventListener(
+            "DOMContentLoaded",
+            () => {
+              syncBanner();
+              registerPWAWorker();
+            },
+            { once: true }
+          );
         } else {
           syncBanner();
+          registerPWAWorker();
         }
       })();
     </script>

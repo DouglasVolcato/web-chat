@@ -410,6 +410,11 @@
   };
 
   const registerPushWorker = async () => {
+    if (typeof window.__webChatRegisterPWAWorker === 'function') {
+      const registration = await window.__webChatRegisterPWAWorker();
+      if (registration) return registration;
+    }
+
     const registration = await navigator.serviceWorker.register(swUrl, {
       scope: `${swScopeBase}/`,
       updateViaCache: 'none'
