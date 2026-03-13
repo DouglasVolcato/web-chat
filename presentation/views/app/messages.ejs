@@ -222,8 +222,10 @@
       }
     });
     msgInput.addEventListener('focus', () => {
+      pinIOSViewport();
       window.setTimeout(() => {
         if (threadEl) threadEl.scrollTop = threadEl.scrollHeight;
+        pinIOSViewport();
       }, 150);
     });
     if (!mobileMedia.matches) {
@@ -236,10 +238,12 @@
     if (!msgInput || document.activeElement !== msgInput) return;
     window.setTimeout(() => {
       if (threadEl) threadEl.scrollTop = threadEl.scrollHeight;
+      pinIOSViewport();
     }, 120);
   };
 
   window.visualViewport?.addEventListener('resize', keepConversationVisible);
+  window.visualViewport?.addEventListener('scroll', pinIOSViewport);
 
   const renderEmptyChatList = () => `
     <div class="wa-empty-list">

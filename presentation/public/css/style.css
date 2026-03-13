@@ -1997,6 +1997,8 @@ footer.app-footer {
 
 /* --- WA Chat Header --- */
 .wa-chat-header {
+    position: sticky;
+    top: 0;
     display: flex;
     align-items: center;
     gap: 0.75rem;
@@ -2145,6 +2147,8 @@ footer.app-footer {
 
 /* --- WA Composer --- */
 .wa-composer {
+    position: sticky;
+    bottom: 0;
     padding: 0.6rem 1rem calc(0.6rem + env(safe-area-inset-bottom, 0px));
     background: var(--sf-bg-surface);
     border-top: 1px solid var(--sf-border);
