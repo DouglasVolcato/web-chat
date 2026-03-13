@@ -138,11 +138,17 @@
   const messagesBaseUrl = "{{ url "/app/messages" }}";
   const messageStateUrl = "{{ url "/app/messages/state" }}";
   const addContactUrl = "{{ url "/app/profile" }}#qr-section";
+  const vapidPublicKey = '{{ .VAPIDPublicKey }}';
+  const swUrl = '{{ url "/sw.js" }}';
+  const swScopeBase = '{{ url "/" }}'.replace(/\/$/, '');
+  const pushSubscriptionUrl = '{{ url "/app/push/subscriptions" }}';
 
   // Scroll to bottom of messages
   const threadEl = document.getElementById('messages-thread');
   const messagesContainer = threadEl?.querySelector('.wa-messages-container');
   const chatListEl = document.getElementById('chat-list');
+  const pushStatus = document.getElementById('push-status');
+  const root = document.documentElement;
   if (threadEl) threadEl.scrollTop = threadEl.scrollHeight;
 
   const escapeHTML = (value) => String(value || '')
@@ -175,6 +181,11 @@
   document.getElementById('back-to-list-btn')?.addEventListener('click', () => sidebar?.classList.add('show'));
   const mobileMedia = window.matchMedia('(max-width: 991.98px)');
 
+  const syncViewportHeight = () => {
+    const viewportHeight = window.visualViewport?.height || window.innerHeight;
+    root.style.setProperty('--wa-viewport-height', `${Math.round(viewportHeight)}px`);
+  };
+
   const syncSidebarForViewport = () => {
     if (!sidebar || !mobileMedia.matches) return;
     if (activeChatID) {
@@ -184,8 +195,13 @@
     sidebar.classList.add('show');
   };
 
+  syncViewportHeight();
   syncSidebarForViewport();
   mobileMedia.addEventListener?.('change', syncSidebarForViewport);
+  window.addEventListener('resize', syncViewportHeight);
+  window.addEventListener('orientationchange', syncViewportHeight);
+  window.visualViewport?.addEventListener('resize', syncViewportHeight);
+  window.visualViewport?.addEventListener('scroll', syncViewportHeight);
 
   // Send with Enter
   const msgInput = document.getElementById('message-input');
@@ -207,6 +223,7 @@
   }
 
   const keepConversationVisible = () => {
+    syncViewportHeight();
     if (!msgInput || document.activeElement !== msgInput) return;
     window.setTimeout(() => {
       msgInput.scrollIntoView({ block: 'nearest' });
@@ -364,44 +381,121 @@
   }
 
   // Push notifications
-  async function enablePush() {
-    const status = document.getElementById('push-status');
-    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
-      if (status) status.textContent = 'Push não suportado neste navegador.';
-      return;
-    }
+  const setPushStatus = (message) => {
+    if (!pushStatus) return;
+    pushStatus.textContent = message || '';
+  };
 
-    const vapidPublicKey = '{{ .VAPIDPublicKey }}';
-    if (!vapidPublicKey) {
-      if (status) status.textContent = 'Push ainda não configurado.';
-      return;
+  const readTextResponse = async (response) => {
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) {
+      const payload = await response.json().catch(() => null);
+      if (payload?.message) return String(payload.message).trim();
     }
+    return (await response.text().catch(() => '')).trim();
+  };
 
-    const permission = await Notification.requestPermission();
-    if (permission !== 'granted') {
-      if (status) status.textContent = 'Permissão negada.';
-      return;
-    }
+  const base64UrlToUint8Array = (value) => {
+    const normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized + '='.repeat((4 - normalized.length % 4) % 4);
+    return Uint8Array.from(atob(padded), (char) => char.charCodeAt(0));
+  };
 
-    const swUrl = '{{ url "/sw.js" }}';
-    const swScopeBase = '{{ url "/" }}'.replace(/\/$/, '');
-    const reg = await navigator.serviceWorker.register(swUrl, { scope: `${swScopeBase}/` });
-    const sub = await reg.pushManager.subscribe({
-      userVisibleOnly: true,
-      applicationServerKey: Uint8Array.from(atob(vapidPublicKey.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0))
+  const detectPushDeviceLabel = () => {
+    const ua = navigator.userAgent || '';
+    const mode = window.matchMedia('(display-mode: standalone)').matches ? 'App' : 'Navegador';
+    if (/Android/i.test(ua)) return `Android ${mode}`;
+    if (/iPhone|iPad|iPod/i.test(ua)) return `iPhone ${mode}`;
+    return `Desktop ${mode}`;
+  };
+
+  const registerPushWorker = async () => {
+    const registration = await navigator.serviceWorker.register(swUrl, {
+      scope: `${swScopeBase}/`,
+      updateViaCache: 'none'
     });
+    await navigator.serviceWorker.ready;
+    await registration.update().catch(() => {});
+    return registration;
+  };
 
-    const save = await fetch('{{ url "/app/push/subscriptions" }}', {
+  const persistSubscription = async (subscription) => {
+    const payload = typeof subscription.toJSON === 'function' ? subscription.toJSON() : subscription;
+    const response = await fetch(pushSubscriptionUrl, {
       method: 'POST',
       credentials: 'same-origin',
       headers: { 'Content-Type': 'application/json', 'X-CSRF-Token': '{{ .CSRFToken }}' },
-      body: JSON.stringify(sub)
+      body: JSON.stringify({
+        ...payload,
+        device_label: detectPushDeviceLabel()
+      })
     });
 
-    if (status) status.textContent = save.ok ? 'Notificações ativadas ✓' : 'Falha ao ativar notificações.';
+    if (!response.ok) {
+      throw new Error((await readTextResponse(response)) || 'Falha ao salvar as notificações.');
+    }
+  };
+
+  const ensurePushSubscription = async ({ promptPermission = false, silent = false } = {}) => {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+      if (!silent) setPushStatus('Push não suportado neste navegador.');
+      return null;
+    }
+
+    if (!vapidPublicKey) {
+      if (!silent) setPushStatus('Push ainda não configurado.');
+      return null;
+    }
+
+    let permission = Notification.permission;
+    if (permission !== 'granted' && promptPermission) {
+      permission = await Notification.requestPermission();
+    }
+
+    if (permission !== 'granted') {
+      if (!silent) {
+        setPushStatus(permission === 'denied' ? 'Permissão negada.' : 'Permita notificações no navegador.');
+      }
+      return null;
+    }
+
+    try {
+      const registration = await registerPushWorker();
+      let subscription = await registration.pushManager.getSubscription();
+
+      if (!subscription) {
+        subscription = await registration.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: base64UrlToUint8Array(vapidPublicKey)
+        });
+      }
+
+      await persistSubscription(subscription);
+      if (!silent) setPushStatus('Notificações ativadas ✓');
+      return subscription;
+    } catch (error) {
+      console.error('Push subscription error:', error);
+      if (!silent) {
+        setPushStatus(error?.message || 'Falha ao ativar notificações.');
+      }
+      return null;
+    }
+  };
+
+  async function enablePush() {
+    await ensurePushSubscription({ promptPermission: true, silent: false });
   }
 
   document.getElementById('enable-push')?.addEventListener('click', enablePush);
+
+  if ('Notification' in window && Notification.permission === 'granted') {
+    ensurePushSubscription({ silent: true });
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        ensurePushSubscription({ silent: true });
+      }
+    });
+  }
 </script>
 {{ template "scripts.ejs" . }}
 </body>
