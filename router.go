@@ -169,6 +169,12 @@ func (lrw *loggingResponseWriter) Write(b []byte) (int, error) {
 	return lrw.WrapResponseWriter.Write(b)
 }
 
+func (lrw *loggingResponseWriter) Flush() {
+	if flusher, ok := lrw.WrapResponseWriter.(http.Flusher); ok {
+		flusher.Flush()
+	}
+}
+
 func (app *App) tracingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
