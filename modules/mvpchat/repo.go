@@ -15,6 +15,7 @@ type Repository interface {
 	GetUserChats(ctx context.Context, tx *sql.Tx, userID string) ([]ChatListItem, error)
 	GetChatMessages(ctx context.Context, tx *sql.Tx, userID, chatID string) ([]Message, error)
 	IsChatParticipant(ctx context.Context, tx *sql.Tx, userID, chatID string) (bool, error)
+	GetChatParticipantIDs(ctx context.Context, tx *sql.Tx, chatID string) ([]string, error)
 	AreContacts(ctx context.Context, tx *sql.Tx, userID, targetID string) (bool, error)
 	GetOrCreateDirectChat(ctx context.Context, tx *sql.Tx, userA, userB string) (string, error)
 	CreateMessage(ctx context.Context, tx *sql.Tx, chatID, senderID, content string, expiresAt time.Time) error
@@ -111,6 +112,24 @@ func (r *PostgresRepository) IsChatParticipant(ctx context.Context, tx *sql.Tx, 
 		return false, err
 	}
 	return ok, nil
+}
+
+func (r *PostgresRepository) GetChatParticipantIDs(ctx context.Context, tx *sql.Tx, chatID string) ([]string, error) {
+	rows, err := models.QueryContext(tx, ctx, `select user_id from chat_participants where chat_id=$1`, chatID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	ids := make([]string, 0, 2)
+	for rows.Next() {
+		var userID string
+		if err := rows.Scan(&userID); err != nil {
+			return nil, err
+		}
+		ids = append(ids, userID)
+	}
+	return ids, rows.Err()
 }
 
 func (r *PostgresRepository) AreContacts(ctx context.Context, tx *sql.Tx, userID, targetID string) (bool, error) {

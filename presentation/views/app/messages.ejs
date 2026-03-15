@@ -148,6 +148,7 @@
   const currentUserID = "{{ if .User }}{{ .User.ID }}{{ end }}";
   const messagesBaseUrl = "{{ url "/app/messages" }}";
   const messageStateUrl = "{{ url "/app/messages/state" }}";
+  const messageStreamUrl = "{{ url "/app/messages/stream" }}";
   const addContactUrl = "{{ url "/app/profile" }}#qr-section";
   const vapidPublicKey = '{{ .VAPIDPublicKey }}';
   const swUrl = '{{ url "/sw.js" }}';
@@ -347,6 +348,7 @@
   let lastChatState = '';
   let lastMessageState = '';
   let refreshingState = false;
+  let fallbackPollTimer = 0;
 
   const refreshChatState = async () => {
     if (refreshingState || document.hidden) return;
@@ -393,15 +395,108 @@
     }
   };
 
+  const stopPollingFallback = () => {
+    if (!fallbackPollTimer) return;
+    window.clearInterval(fallbackPollTimer);
+    fallbackPollTimer = 0;
+  };
+
+  const startPollingFallback = () => {
+    if (fallbackPollTimer || document.hidden) return;
+    fallbackPollTimer = window.setInterval(() => {
+      refreshChatState();
+    }, 15000);
+  };
+
   if (chatListEl) {
-    window.setInterval(refreshChatState, 4000);
     window.addEventListener('focus', refreshChatState);
-    document.addEventListener('visibilitychange', () => {
-      if (!document.hidden) {
+    refreshChatState();
+  }
+
+  if ('EventSource' in window && messageStreamUrl) {
+    let stream;
+    let reconnectTimer = 0;
+    let streamConnected = false;
+
+    const clearReconnectTimer = () => {
+      if (!reconnectTimer) return;
+      window.clearTimeout(reconnectTimer);
+      reconnectTimer = 0;
+    };
+
+    const closeMessageStream = () => {
+      streamConnected = false;
+      if (stream) {
+        stream.close();
+        stream = null;
+      }
+    };
+
+    const scheduleReconnect = () => {
+      if (reconnectTimer || document.hidden) return;
+      reconnectTimer = window.setTimeout(() => {
+        reconnectTimer = 0;
+        connectMessageStream();
+      }, 2500);
+    };
+
+    const connectMessageStream = () => {
+      if (document.hidden) return;
+
+      closeMessageStream();
+      stream = new EventSource(messageStreamUrl, { withCredentials: true });
+
+      stream.onopen = () => {
+        streamConnected = true;
+        stopPollingFallback();
         refreshChatState();
+      };
+
+      stream.addEventListener('refresh', () => {
+        refreshChatState();
+      });
+
+      stream.onerror = () => {
+        closeMessageStream();
+        if (!document.hidden) {
+          startPollingFallback();
+          scheduleReconnect();
+        }
+      };
+    };
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        clearReconnectTimer();
+        stopPollingFallback();
+        closeMessageStream();
+        return;
+      }
+
+      refreshChatState();
+      if (!streamConnected) {
+        startPollingFallback();
+        connectMessageStream();
       }
     });
-    refreshChatState();
+
+    window.addEventListener('beforeunload', () => {
+      clearReconnectTimer();
+      stopPollingFallback();
+      closeMessageStream();
+    });
+
+    connectMessageStream();
+  } else if (chatListEl) {
+    startPollingFallback();
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        stopPollingFallback();
+        return;
+      }
+      refreshChatState();
+      startPollingFallback();
+    });
   }
 
   // Push notifications

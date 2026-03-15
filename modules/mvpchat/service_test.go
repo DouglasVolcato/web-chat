@@ -39,6 +39,9 @@ func (f *fakeRepo) GetChatMessages(ctx context.Context, tx *sql.Tx, userID, chat
 func (f *fakeRepo) IsChatParticipant(ctx context.Context, tx *sql.Tx, userID, chatID string) (bool, error) {
 	return f.chatAccessOK, nil
 }
+func (f *fakeRepo) GetChatParticipantIDs(ctx context.Context, tx *sql.Tx, chatID string) ([]string, error) {
+	return []string{"u1", "u2"}, nil
+}
 func (f *fakeRepo) AreContacts(ctx context.Context, tx *sql.Tx, userID, targetID string) (bool, error) {
 	return f.contactsOK, nil
 }

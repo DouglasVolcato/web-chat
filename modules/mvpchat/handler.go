@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -23,9 +24,12 @@ const (
 	dbTimeout      = 10 * time.Second
 )
 
-type Handler struct{ service *Service }
+type Handler struct {
+	service *Service
+	hub     *messageHub
+}
 
-func NewHandler(service *Service) *Handler { return &Handler{service: service} }
+func NewHandler(service *Service) *Handler { return &Handler{service: service, hub: newMessageHub()} }
 
 type jsonMessageResponse struct {
 	Message     string `json:"message,omitempty"`
@@ -44,6 +48,7 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 		router.Use(helpers.UserRateLimit("mvpchat.messages", 600, time.Minute))
 		router.Get("/", helpers.AuthDecorator(h.listChatsPage))
 		router.Get("/state", helpers.AuthDecorator(h.chatState))
+		router.Get("/stream", helpers.AuthDecorator(h.streamMessages))
 		router.Get("/{chatID}", helpers.AuthDecorator(h.chatPage))
 		router.Post("/{chatID}/clear", helpers.AuthDecorator(h.clearChat))
 		router.Post("/send", helpers.AuthDecorator(h.sendMessage))
@@ -137,8 +142,15 @@ func (h *Handler) sendMessage(w http.ResponseWriter, r *http.Request) {
 		helpers.RenderUnauthorized(w, r)
 		return
 	}
-	defer done()
-	chatID, err := h.service.SendMessage(ctx, tx, user.ID, strings.TrimSpace(r.FormValue("target_user_id")), strings.TrimSpace(r.FormValue("content")), r.RemoteAddr)
+	finished := false
+	defer func() {
+		if !finished {
+			done()
+		}
+	}()
+
+	targetUserID := strings.TrimSpace(r.FormValue("target_user_id"))
+	chatID, err := h.service.SendMessage(ctx, tx, user.ID, targetUserID, strings.TrimSpace(r.FormValue("content")), r.RemoteAddr)
 	if err != nil {
 		status := http.StatusBadRequest
 		if errors.Is(err, ErrNotContact) {
@@ -147,6 +159,9 @@ func (h *Handler) sendMessage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), status)
 		return
 	}
+	done()
+	finished = true
+	h.hub.Publish(user.ID, targetUserID)
 	helpers.Redirect(w, r, "/app/messages/"+chatID)
 }
 
@@ -160,7 +175,12 @@ func (h *Handler) clearChat(w http.ResponseWriter, r *http.Request) {
 		helpers.RenderUnauthorized(w, r)
 		return
 	}
-	defer done()
+	finished := false
+	defer func() {
+		if !finished {
+			done()
+		}
+	}()
 
 	chatID := chi.URLParam(r, "chatID")
 	if err := h.service.ClearChat(ctx, tx, user.ID, chatID, r.RemoteAddr); err != nil {
@@ -171,8 +191,60 @@ func (h *Handler) clearChat(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), status)
 		return
 	}
+	participantIDs, err := h.service.repo.GetChatParticipantIDs(ctx, tx, chatID)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 
+	done()
+	finished = true
+	h.hub.Publish(participantIDs...)
 	helpers.Redirect(w, r, "/app/messages/"+chatID)
+}
+
+func (h *Handler) streamMessages(w http.ResponseWriter, r *http.Request) {
+	userID, err := helpers.ResolveUserIDFromRequest(r)
+	if err != nil || strings.TrimSpace(userID) == "" {
+		helpers.RenderUnauthorized(w, r)
+		return
+	}
+
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		http.Error(w, "stream não suportado", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("X-Accel-Buffering", "no")
+
+	events, unsubscribe := h.hub.Subscribe(strings.TrimSpace(userID))
+	defer unsubscribe()
+
+	fmt.Fprint(w, "event: ready\ndata: connected\n\n")
+	flusher.Flush()
+
+	keepAlive := time.NewTicker(25 * time.Second)
+	defer keepAlive.Stop()
+
+	for {
+		select {
+		case <-r.Context().Done():
+			return
+		case _, ok := <-events:
+			if !ok {
+				return
+			}
+			fmt.Fprint(w, "event: refresh\ndata: now\n\n")
+			flusher.Flush()
+		case <-keepAlive.C:
+			fmt.Fprint(w, ": keepalive\n\n")
+			flusher.Flush()
+		}
+	}
 }
 
 func (h *Handler) registerPushSubscription(w http.ResponseWriter, r *http.Request) {
