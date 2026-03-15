@@ -5,7 +5,6 @@ import (
 	"crypto/subtle"
 	"encoding/base64"
 	"net/http"
-	"os"
 	"strings"
 )
 
@@ -28,7 +27,7 @@ func EnsureCSRFToken(w http.ResponseWriter, r *http.Request) string {
 		Value:    token,
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   strings.EqualFold(os.Getenv("APP_ENV"), "prod"),
+		Secure:   true,
 		SameSite: http.SameSiteLaxMode,
 	})
 

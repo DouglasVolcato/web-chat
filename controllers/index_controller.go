@@ -131,11 +131,7 @@ func (c *IndexController) RegisterRoutes(router chi.Router) {
 			}
 
 			helpers.Redirect(w, r, "/app/messages")
-
-			RenderTemplate(w, filepath.Join("partials", "alert.ejs"), map[string]any{
-				"Type":    "success",
-				"Message": "Login com Google realizado! Redirecionando...",
-			})
+			return
 		})
 	})
 }

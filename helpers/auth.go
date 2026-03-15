@@ -87,7 +87,7 @@ func SetAuthCookie(w http.ResponseWriter, userID string, duration time.Duration)
 		Value:    token,
 		Path:     "/",
 		HttpOnly: true,
-		Secure:   strings.EqualFold(os.Getenv("APP_ENV"), "prod"),
+		Secure:   true,
 		SameSite: http.SameSiteLaxMode,
 	}
 
@@ -107,6 +107,8 @@ func ClearAuthCookie(w http.ResponseWriter) {
 		Value:    "",
 		Path:     "/",
 		HttpOnly: true,
+		Secure:   true,
+		SameSite: http.SameSiteLaxMode,
 		MaxAge:   -1,
 	})
 }
