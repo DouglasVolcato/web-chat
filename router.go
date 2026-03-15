@@ -6,7 +6,6 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"strings"
@@ -18,7 +17,6 @@ import (
 	"app/modules/mvpchat"
 	"app/modules/profile"
 	"app/observability"
-	"app/payments"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
@@ -122,20 +120,8 @@ func (app *App) router() http.Handler {
 		indexController := controllers.IndexController{}
 		indexController.RegisterRoutes(router)
 
-		paymentsController, err := controllers.NewPaymentsController()
-		var paymentService *payments.Service
-		if err != nil {
-			log.Printf("payment routes disabled: %v", err)
-		} else {
-			paymentService = paymentsController.Service()
-		}
-		paymentsController.RegisterRoutes(router)
-
-		appController := controllers.NewAppController(paymentService)
+		appController := controllers.NewAppController()
 		appController.RegisterRoutes(router)
-
-		chatController := controllers.ChatController{}
-		chatController.RegisterRoutes(router)
 
 		profileHandler := profile.NewHandler(profile.NewService(profile.NewPostgresRepository()))
 		profileHandler.RegisterRoutes(router)

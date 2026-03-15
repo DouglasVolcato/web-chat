@@ -29,26 +29,6 @@
           </div>
           <i class="bi bi-chevron-right wa-dashboard-card-arrow"></i>
         </a>
-        <a href="{{ url "/app/chat" }}" class="wa-dashboard-card">
-          <div class="wa-dashboard-card-icon wa-dashboard-card-icon--ai">
-            <i class="bi bi-robot"></i>
-          </div>
-          <div class="wa-dashboard-card-info">
-            <strong>Chat com IA</strong>
-            <span>Converse com assistente</span>
-          </div>
-          <i class="bi bi-chevron-right wa-dashboard-card-arrow"></i>
-        </a>
-        <a href="{{ url "/app/chat/new" }}" class="wa-dashboard-card">
-          <div class="wa-dashboard-card-icon wa-dashboard-card-icon--new">
-            <i class="bi bi-plus-lg"></i>
-          </div>
-          <div class="wa-dashboard-card-info">
-            <strong>Novo chat IA</strong>
-            <span>Criar uma nova conversa</span>
-          </div>
-          <i class="bi bi-chevron-right wa-dashboard-card-arrow"></i>
-        </a>
         <a href="{{ url "/app/profile" }}#qr-section" class="wa-dashboard-card">
           <div class="wa-dashboard-card-icon wa-dashboard-card-icon--profile">
             <i class="bi bi-qr-code"></i>
@@ -59,39 +39,17 @@
           </div>
           <i class="bi bi-chevron-right wa-dashboard-card-arrow"></i>
         </a>
+        <a href="{{ url "/app/profile" }}" class="wa-dashboard-card">
+          <div class="wa-dashboard-card-icon wa-dashboard-card-icon--new">
+            <i class="bi bi-person"></i>
+          </div>
+          <div class="wa-dashboard-card-info">
+            <strong>Perfil</strong>
+            <span>Gerencie sua conta</span>
+          </div>
+          <i class="bi bi-chevron-right wa-dashboard-card-arrow"></i>
+        </a>
       </div>
-    </section>
-
-    <!-- Recent Chats -->
-    <section class="wa-settings-section">
-      <h3 class="wa-settings-section-title">
-        <i class="bi bi-clock-history"></i>
-        Chats recentes
-      </h3>
-      {{ if .Chats }}
-        <div class="wa-dashboard-recent-list">
-          {{ range .Chats }}
-          <a href='{{ url (printf "/app/chat/%s" .ID) }}' class="wa-dashboard-recent-item">
-            <div class="wa-avatar wa-avatar--sm wa-avatar--ai">
-              <i class="bi bi-chat-dots" style="font-size: 0.8rem;"></i>
-            </div>
-            <div class="wa-dashboard-recent-info">
-              <strong>{{ default .Title "Chat" }}</strong>
-              <span>Atualizado em {{ .UpdatedAt.Format "02/01/2006" }}</span>
-            </div>
-            <i class="bi bi-chevron-right wa-dashboard-card-arrow"></i>
-          </a>
-          {{ end }}
-        </div>
-      {{ else }}
-        <div class="wa-dashboard-empty">
-          <i class="bi bi-chat-dots"></i>
-          <p>Nenhum chat criado ainda</p>
-          <a href="{{ url "/app/chat/new" }}" class="wa-btn wa-btn--outline wa-btn--sm">
-            <i class="bi bi-plus-lg"></i> Criar primeiro chat
-          </a>
-        </div>
-      {{ end }}
     </section>
   </div>
 </div>
