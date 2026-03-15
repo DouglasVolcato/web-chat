@@ -1,4 +1,4 @@
-const CACHE_NAME = 'web-chat-v4';
+const CACHE_NAME = 'web-chat-v5';
 
 const scopeUrl = new URL(self.registration.scope);
 const basePath = scopeUrl.pathname.endsWith('/') ? scopeUrl.pathname.slice(0, -1) : scopeUrl.pathname;
@@ -29,12 +29,62 @@ self.addEventListener('install', () => {
 });
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(clients.claim());
+  event.waitUntil((async () => {
+    const cacheNames = await caches.keys();
+    await Promise.all(
+      cacheNames
+        .filter((name) => name.startsWith('web-chat-') && name !== CACHE_NAME)
+        .map((name) => caches.delete(name))
+    );
+    await clients.claim();
+  })());
 });
 
 self.addEventListener('fetch', (event) => {
-  event.respondWith(fetch(event.request));
+  const { request } = event;
+
+  if (request.method !== 'GET') {
+    return;
+  }
+
+  const requestUrl = new URL(request.url);
+  const requestPath = requestUrl.pathname;
+  const isSameOrigin = requestUrl.origin === self.location.origin;
+  const isMessageStream = request.headers.get('accept')?.includes('text/event-stream') || requestPath === `${basePath}/app/messages/stream`;
+  const isStaticAsset =
+    isSameOrigin &&
+    (
+      requestPath.startsWith(`${basePath}/css/`) ||
+      requestPath.startsWith(`${basePath}/js/`) ||
+      requestPath.startsWith(`${basePath}/icons/`)
+    );
+
+  if (isMessageStream) {
+    event.respondWith(fetch(request));
+    return;
+  }
+
+  if (isStaticAsset) {
+    event.respondWith(cacheFirst(request));
+    return;
+  }
+
+  event.respondWith(fetch(request));
 });
+
+async function cacheFirst(request) {
+  const cache = await caches.open(CACHE_NAME);
+  const cached = await cache.match(request, { ignoreSearch: false });
+  if (cached) {
+    return cached;
+  }
+
+  const response = await fetch(request);
+  if (response && response.ok) {
+    cache.put(request, response.clone()).catch(() => {});
+  }
+  return response;
+}
 
 self.addEventListener('push', (event) => {
   let data = {
