@@ -207,6 +207,14 @@
     root.style.setProperty('--wa-viewport-height', `${Math.round(viewportHeight)}px`);
   };
 
+  const pinIOSViewport = () => {
+    if (!shouldStabilizeIOSKeyboard) return;
+    syncViewportHeight();
+    if (window.scrollY > 0) {
+      window.scrollTo(0, 0);
+    }
+  };
+
   const syncSidebarForViewport = () => {
     if (!sidebar || !mobileMedia.matches) return;
     if (activeChatID) {
