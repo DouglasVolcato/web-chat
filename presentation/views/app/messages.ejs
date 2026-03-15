@@ -349,6 +349,7 @@
   let lastMessageState = '';
   let refreshingState = false;
   let fallbackPollTimer = 0;
+  let safetyPollTimer = 0;
 
   const refreshChatState = async () => {
     if (refreshingState || document.hidden) return;
@@ -408,8 +409,23 @@
     }, 15000);
   };
 
+  const stopSafetyPolling = () => {
+    if (!safetyPollTimer) return;
+    window.clearInterval(safetyPollTimer);
+    safetyPollTimer = 0;
+  };
+
+  const startSafetyPolling = () => {
+    if (safetyPollTimer || document.hidden || !chatListEl) return;
+    const intervalMs = activeChatID ? 5000 : 10000;
+    safetyPollTimer = window.setInterval(() => {
+      refreshChatState();
+    }, intervalMs);
+  };
+
   if (chatListEl) {
     window.addEventListener('focus', refreshChatState);
+    startSafetyPolling();
     refreshChatState();
   }
 
@@ -469,11 +485,13 @@
       if (document.hidden) {
         clearReconnectTimer();
         stopPollingFallback();
+        stopSafetyPolling();
         closeMessageStream();
         return;
       }
 
       refreshChatState();
+      startSafetyPolling();
       if (!streamConnected) {
         startPollingFallback();
         connectMessageStream();
@@ -483,19 +501,23 @@
     window.addEventListener('beforeunload', () => {
       clearReconnectTimer();
       stopPollingFallback();
+      stopSafetyPolling();
       closeMessageStream();
     });
 
     connectMessageStream();
   } else if (chatListEl) {
     startPollingFallback();
+    startSafetyPolling();
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
         stopPollingFallback();
+        stopSafetyPolling();
         return;
       }
       refreshChatState();
       startPollingFallback();
+      startSafetyPolling();
     });
   }
 
