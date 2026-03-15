@@ -7,9 +7,11 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 var viewsBaseDir = resolveTemplatesBaseDir()
+var assetsVersion = resolveAssetsVersion()
 
 func resolveTemplatesBaseDir() string {
 	candidates := []string{
@@ -26,6 +28,20 @@ func resolveTemplatesBaseDir() string {
 	return candidates[0]
 }
 
+func resolveAssetsVersion() string {
+	if version := strings.TrimSpace(os.Getenv("APP_ASSET_VERSION")); version != "" {
+		return version
+	}
+
+	publicDir := filepath.Join("presentation", "public")
+	info, err := os.Stat(publicDir)
+	if err != nil {
+		return fmt.Sprint(time.Now().UTC().Unix())
+	}
+
+	return fmt.Sprint(info.ModTime().UTC().Unix())
+}
+
 func Render(w http.ResponseWriter, view string, data any) error {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
@@ -36,6 +52,9 @@ func Render(w http.ResponseWriter, view string, data any) error {
 	funcMap := template.FuncMap{
 		"url": func(path string) string {
 			return PathURL(path)
+		},
+		"assetVersion": func() string {
+			return assetsVersion
 		},
 		"default": func(value any, defaultValue string) string {
 			switch v := value.(type) {

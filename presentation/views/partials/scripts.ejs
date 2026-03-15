@@ -1,4 +1,4 @@
-{{- $version := default .cacheVersion "1" -}}
+{{- $version := assetVersion -}}
     <script src="{{ url "/js/bootstrap.bundle.min.js" }}?v={{ $version }}" defer></script>
     <script src="{{ url "/js/htmx.min.js" }}?v={{ $version }}" defer></script>
     <script>

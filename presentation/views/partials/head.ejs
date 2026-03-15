@@ -1,4 +1,4 @@
-{{- $version := default .cacheVersion "1" -}}
+{{- $version := assetVersion -}}
 {{- $pageTitle := default .title (default .brand "Web Chat") -}}
 {{- $brandName := default .brand "Web Chat" -}}
 <!DOCTYPE html>

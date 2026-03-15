@@ -95,14 +95,22 @@ func (app *App) router() http.Handler {
 	})
 
 	fileServer := http.FileServer(http.Dir("presentation/public"))
+	cacheStatic := func(next http.Handler, cacheControl string) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if cacheControl != "" {
+				w.Header().Set("Cache-Control", cacheControl)
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
 	registerStaticRoutes := func(router chi.Router, routePrefix string, stripPrefix string) {
-		router.Handle(routePrefix+"/css/*", http.StripPrefix(stripPrefix, fileServer))
-		router.Handle(routePrefix+"/js/*", http.StripPrefix(stripPrefix, fileServer))
-		router.Handle(routePrefix+"/icons/*", http.StripPrefix(stripPrefix, fileServer))
-		router.Handle(routePrefix+"/robots.txt", http.StripPrefix(stripPrefix, fileServer))
-		router.Handle(routePrefix+"/sitemap.xml", http.StripPrefix(stripPrefix, fileServer))
-		router.Handle(routePrefix+"/manifest.json", http.StripPrefix(stripPrefix, fileServer))
-		router.Handle(routePrefix+"/sw.js", http.StripPrefix(stripPrefix, fileServer))
+		router.Handle(routePrefix+"/css/*", cacheStatic(http.StripPrefix(stripPrefix, fileServer), "public, max-age=31536000, immutable"))
+		router.Handle(routePrefix+"/js/*", cacheStatic(http.StripPrefix(stripPrefix, fileServer), "public, max-age=31536000, immutable"))
+		router.Handle(routePrefix+"/icons/*", cacheStatic(http.StripPrefix(stripPrefix, fileServer), "public, max-age=31536000, immutable"))
+		router.Handle(routePrefix+"/robots.txt", cacheStatic(http.StripPrefix(stripPrefix, fileServer), "public, max-age=3600"))
+		router.Handle(routePrefix+"/sitemap.xml", cacheStatic(http.StripPrefix(stripPrefix, fileServer), "public, max-age=3600"))
+		router.Handle(routePrefix+"/manifest.json", cacheStatic(http.StripPrefix(stripPrefix, fileServer), "public, max-age=3600"))
+		router.Handle(routePrefix+"/sw.js", cacheStatic(http.StripPrefix(stripPrefix, fileServer), "no-cache, no-store, must-revalidate"))
 	}
 
 	registerStaticRoutes(mux, "", "/")
