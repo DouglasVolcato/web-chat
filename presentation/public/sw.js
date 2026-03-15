@@ -76,9 +76,11 @@ async function cacheFirst(request) {
   const cache = await caches.open(CACHE_NAME);
   const cached = await cache.match(request, { ignoreSearch: false });
   if (cached) {
+    console.log('[sw] cache hit', request.url);
     return cached;
   }
 
+  console.log('[sw] cache miss', request.url);
   const response = await fetch(request);
   if (response && response.ok) {
     cache.put(request, response.clone()).catch(() => {});
