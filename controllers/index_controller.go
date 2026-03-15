@@ -65,28 +65,19 @@ func (c *IndexController) RegisterRoutes(router chi.Router) {
 
 			credential := strings.TrimSpace(r.FormValue("credential"))
 			if credential == "" {
-				RenderTemplate(w, filepath.Join("partials", "alert.ejs"), map[string]any{
-					"Type":    "warning",
-					"Message": "Não recebemos o token do Google. Tente novamente.",
-				})
+				renderGoogleLoginFeedback(w, r, "warning", "Não recebemos o token do Google. Tente novamente.")
 				return
 			}
 
 			profile, err := helpers.VerifyGoogleIDToken(ctx, credential)
 			if err != nil {
-				RenderTemplate(w, filepath.Join("partials", "alert.ejs"), map[string]any{
-					"Type":    "danger",
-					"Message": "Não foi possível validar seu login com o Google. Tente novamente.",
-				})
+				renderGoogleLoginFeedback(w, r, "danger", "Não foi possível validar seu login com o Google. Tente novamente.")
 				return
 			}
 
 			dbCtx, tx, done, err := models.BeginTransaction(ctx, DbTimeout)
 			if err != nil {
-				RenderTemplate(w, filepath.Join("partials", "alert.ejs"), map[string]any{
-					"Type":    "danger",
-					"Message": "Erro ao iniciar a autenticação. Tente novamente.",
-				})
+				renderGoogleLoginFeedback(w, r, "danger", "Erro ao iniciar a autenticação. Tente novamente.")
 				return
 			}
 			defer done()
@@ -107,31 +98,39 @@ func (c *IndexController) RegisterRoutes(router chi.Router) {
 					}
 
 					if err := user.Create(dbCtx, tx); err != nil {
-						RenderTemplate(w, filepath.Join("partials", "alert.ejs"), map[string]any{
-							"Type":    "danger",
-							"Message": "Erro ao salvar usuário. Atualize e tente novamente.",
-						})
+						renderGoogleLoginFeedback(w, r, "danger", "Erro ao salvar usuário. Atualize e tente novamente.")
 						return
 					}
 				} else {
-					RenderTemplate(w, filepath.Join("partials", "alert.ejs"), map[string]any{
-						"Type":    "danger",
-						"Message": "Erro ao validar sua conta. Tente novamente.",
-					})
+					renderGoogleLoginFeedback(w, r, "danger", "Erro ao validar sua conta. Tente novamente.")
 					return
 				}
 			}
 
 			if err := helpers.SetAuthCookie(w, user.ID, 24*time.Hour); err != nil {
-				RenderTemplate(w, filepath.Join("partials", "alert.ejs"), map[string]any{
-					"Type":    "danger",
-					"Message": "Erro ao salvar sua sessão. Atualize a página e tente novamente.",
-				})
+				renderGoogleLoginFeedback(w, r, "danger", "Erro ao salvar sua sessão. Atualize a página e tente novamente.")
 				return
 			}
 
 			helpers.Redirect(w, r, "/app/messages")
 			return
 		})
+	})
+}
+
+func renderGoogleLoginFeedback(w http.ResponseWriter, r *http.Request, alertType, message string) {
+	alert := map[string]any{
+		"Type":    alertType,
+		"Message": message,
+	}
+
+	if helpers.IsHTMXRequest(r) {
+		RenderTemplate(w, filepath.Join("partials", "alert.ejs"), alert)
+		return
+	}
+
+	RenderTemplate(w, filepath.Join("landing", "login.ejs"), map[string]any{
+		"GoogleClientID": strings.TrimSpace(os.Getenv("GOOGLE_CLIENT_ID")),
+		"Alert":          alert,
 	})
 }
