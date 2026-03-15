@@ -20,6 +20,17 @@
         <i class="bi bi-search"></i>
         <input type="text" id="chat-search" class="wa-search-input" placeholder="Pesquisar ou começar uma nova conversa" autocomplete="off">
       </div>
+      <div class="wa-push-cta" id="push-cta" hidden>
+        <div class="wa-push-cta__copy">
+          <strong>Ative as notificações</strong>
+          <span>Permissão global para avisos de todas as conversas neste dispositivo.</span>
+        </div>
+        <button class="wa-btn wa-btn--primary wa-push-cta__button" type="button" id="enable-push">
+          <i class="bi bi-bell-fill"></i>
+          <span>Ativar notificações</span>
+        </button>
+        <small class="wa-push-cta__status" id="push-status"></small>
+      </div>
     </header>
 
     <div class="wa-chat-list" id="chat-list" role="list">
@@ -69,11 +80,6 @@
         </div>
         {{ end }}{{ end }}
       </div>
-      <div class="wa-chat-header-actions">
-        <button class="wa-icon-btn" type="button" id="enable-push" title="Ativar notificações">
-          <i class="bi bi-bell"></i>
-        </button>
-      </div>
     </header>
 
     <!-- Messages Thread -->
@@ -100,9 +106,6 @@
         </button>
       </div>
     </form>
-
-    <small class="wa-push-status" id="push-status"></small>
-
     {{ else }}
     <!-- Welcome Screen -->
     <div class="wa-welcome">
@@ -147,6 +150,7 @@
   const threadEl = document.getElementById('messages-thread');
   const messagesContainer = threadEl?.querySelector('.wa-messages-container');
   const chatListEl = document.getElementById('chat-list');
+  const pushCta = document.getElementById('push-cta');
   const pushStatus = document.getElementById('push-status');
   const root = document.documentElement;
   if (threadEl) threadEl.scrollTop = threadEl.scrollHeight;
@@ -398,6 +402,18 @@
     pushStatus.textContent = message || '';
   };
 
+  const syncPushPromptVisibility = () => {
+    if (!pushCta) return;
+
+    const supported = 'Notification' in window;
+    const granted = supported && Notification.permission === 'granted';
+    pushCta.hidden = !supported || granted;
+
+    if (granted) {
+      setPushStatus('');
+    }
+  };
+
   const readTextResponse = async (response) => {
     const contentType = response.headers.get('content-type') || '';
     if (contentType.includes('application/json')) {
@@ -454,6 +470,11 @@
   };
 
   const ensurePushSubscription = async ({ promptPermission = false, silent = false } = {}) => {
+    if (!('Notification' in window)) {
+      if (!silent) setPushStatus('Notificações não suportadas neste navegador.');
+      return null;
+    }
+
     if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
       if (!silent) setPushStatus('Push não suportado neste navegador.');
       return null;
@@ -467,11 +488,12 @@
     let permission = Notification.permission;
     if (permission !== 'granted' && promptPermission) {
       permission = await Notification.requestPermission();
+      syncPushPromptVisibility();
     }
 
     if (permission !== 'granted') {
       if (!silent) {
-        setPushStatus(permission === 'denied' ? 'Permissão negada.' : 'Permita notificações no navegador.');
+        setPushStatus(permission === 'denied' ? 'Permissão negada. Libere nas configurações do navegador.' : 'Permita notificações no navegador.');
       }
       return null;
     }
@@ -489,6 +511,7 @@
 
       await persistSubscription(subscription);
       if (!silent) setPushStatus('Notificações ativadas ✓');
+      syncPushPromptVisibility();
       return subscription;
     } catch (error) {
       console.error('Push subscription error:', error);
@@ -504,11 +527,19 @@
   }
 
   document.getElementById('enable-push')?.addEventListener('click', enablePush);
+  syncPushPromptVisibility();
+  window.addEventListener('focus', syncPushPromptVisibility);
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+      syncPushPromptVisibility();
+    }
+  });
 
   if ('Notification' in window && Notification.permission === 'granted') {
     ensurePushSubscription({ silent: true });
     document.addEventListener('visibilitychange', () => {
       if (!document.hidden) {
+        syncPushPromptVisibility();
         ensurePushSubscription({ silent: true });
       }
     });

@@ -1821,6 +1821,60 @@ footer.app-footer {
     color: var(--sf-text-muted);
 }
 
+.wa-push-cta {
+    margin-top: 0.9rem;
+    padding: 0.95rem;
+    border-radius: calc(var(--sf-radius-lg) + 0.1rem);
+    border: 1px solid color-mix(in srgb, var(--sf-accent) 28%, var(--sf-border));
+    background: linear-gradient(
+        135deg,
+        color-mix(in srgb, var(--sf-accent) 16%, var(--sf-bg-surface)) 0%,
+        var(--sf-bg-surface) 100%
+    );
+    box-shadow: 0 10px 28px rgba(249, 115, 22, 0.12);
+}
+
+.wa-push-cta[hidden] {
+    display: none !important;
+}
+
+.wa-push-cta__copy {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    margin-bottom: 0.8rem;
+}
+
+.wa-push-cta__copy strong {
+    color: var(--sf-text-main);
+    font-size: 0.95rem;
+}
+
+.wa-push-cta__copy span {
+    color: var(--sf-text-muted);
+    font-size: 0.82rem;
+    line-height: 1.45;
+}
+
+.wa-push-cta__button {
+    width: 100%;
+    justify-content: center;
+    gap: 0.45rem;
+    box-shadow: 0 8px 18px rgba(15, 118, 110, 0.18);
+}
+
+.wa-push-cta__status {
+    display: none;
+    margin-top: 0.7rem;
+    color: var(--sf-text-main);
+    font-size: 0.78rem;
+    line-height: 1.4;
+}
+
+.wa-push-cta__status:not(:empty) {
+    display: block;
+}
+
 /* --- WA Chat List --- */
 .wa-chat-list {
     flex: 1;
@@ -2231,30 +2285,6 @@ footer.app-footer {
 .wa-send-btn:hover {
     transform: scale(1.08);
     box-shadow: 0 4px 14px rgba(15, 118, 110, 0.35);
-}
-
-.wa-push-status {
-    display: none;
-    position: absolute;
-    left: 50%;
-    bottom: calc(5.25rem + env(safe-area-inset-bottom, 0px));
-    transform: translateX(-50%);
-    z-index: 12;
-    max-width: calc(100% - 2rem);
-    width: max-content;
-    text-align: center;
-    color: var(--sf-text-main);
-    font-size: 0.78rem;
-    padding: 0.45rem 0.8rem;
-    border-radius: var(--sf-radius-full);
-    border: 1px solid color-mix(in srgb, var(--sf-primary) 16%, var(--sf-border));
-    background: color-mix(in srgb, var(--sf-bg-surface) 92%, var(--sf-primary) 8%);
-    box-shadow: 0 8px 24px rgba(2, 6, 23, 0.16);
-    pointer-events: none;
-}
-
-.wa-push-status:not(:empty) {
-    display: block;
 }
 
 /* --- WA Welcome Screen --- */
