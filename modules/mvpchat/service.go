@@ -20,6 +20,7 @@ import (
 var (
 	ErrInvalidMessage = errors.New("mensagem inválida")
 	ErrNotContact     = errors.New("usuário não é seu contato")
+	ErrChatForbidden  = errors.New("chat inválido")
 	ErrInvalidQR      = errors.New("qr inválido ou expirado")
 	ErrOwnQR          = errors.New("você não pode usar seu próprio QR Code")
 )
@@ -53,6 +54,27 @@ func (s *Service) ListMessages(ctx context.Context, tx *sql.Tx, userID, chatID s
 		return nil, err
 	}
 	return s.repo.GetChatMessages(ctx, tx, userID, chatID)
+}
+
+func (s *Service) ClearChat(ctx context.Context, tx *sql.Tx, userID, chatID, ip string) error {
+	chatID = strings.TrimSpace(chatID)
+	if chatID == "" {
+		return ErrChatForbidden
+	}
+
+	ok, err := s.repo.IsChatParticipant(ctx, tx, userID, chatID)
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return ErrChatForbidden
+	}
+
+	if err := s.repo.DeleteChatMessages(ctx, tx, chatID); err != nil {
+		return err
+	}
+
+	return s.repo.InsertAuditLog(ctx, tx, userID, "chat.cleared", sanitizeIP(ip), map[string]any{"chat_id": chatID})
 }
 
 func (s *Service) RegisterPushSubscription(ctx context.Context, tx *sql.Tx, userID, ip string, in PushSubscriptionInput) error {

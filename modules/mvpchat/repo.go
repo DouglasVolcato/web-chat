@@ -14,9 +14,11 @@ type Repository interface {
 	PurgeExpiredMessages(ctx context.Context, tx *sql.Tx) error
 	GetUserChats(ctx context.Context, tx *sql.Tx, userID string) ([]ChatListItem, error)
 	GetChatMessages(ctx context.Context, tx *sql.Tx, userID, chatID string) ([]Message, error)
+	IsChatParticipant(ctx context.Context, tx *sql.Tx, userID, chatID string) (bool, error)
 	AreContacts(ctx context.Context, tx *sql.Tx, userID, targetID string) (bool, error)
 	GetOrCreateDirectChat(ctx context.Context, tx *sql.Tx, userA, userB string) (string, error)
 	CreateMessage(ctx context.Context, tx *sql.Tx, chatID, senderID, content string, expiresAt time.Time) error
+	DeleteChatMessages(ctx context.Context, tx *sql.Tx, chatID string) error
 	TrimChatMessages(ctx context.Context, tx *sql.Tx, chatID string, keep int) error
 	CreateQRToken(ctx context.Context, tx *sql.Tx, ownerID, tokenHash string, expiresAt time.Time) error
 	LookupActiveQROwner(ctx context.Context, tx *sql.Tx, tokenHash string, now time.Time) (string, error)
@@ -102,6 +104,15 @@ func (r *PostgresRepository) GetChatMessages(ctx context.Context, tx *sql.Tx, us
 	return items, rows.Err()
 }
 
+func (r *PostgresRepository) IsChatParticipant(ctx context.Context, tx *sql.Tx, userID, chatID string) (bool, error) {
+	row := models.QueryRowContext(tx, ctx, `select exists(select 1 from chat_participants where chat_id=$1 and user_id=$2)`, chatID, userID)
+	var ok bool
+	if err := row.Scan(&ok); err != nil {
+		return false, err
+	}
+	return ok, nil
+}
+
 func (r *PostgresRepository) AreContacts(ctx context.Context, tx *sql.Tx, userID, targetID string) (bool, error) {
 	row := models.QueryRowContext(tx, ctx, `select exists(select 1 from contacts where user_id=$1 and contact_user_id=$2)`, userID, targetID)
 	var ok bool
@@ -128,6 +139,11 @@ func (r *PostgresRepository) GetOrCreateDirectChat(ctx context.Context, tx *sql.
 
 func (r *PostgresRepository) CreateMessage(ctx context.Context, tx *sql.Tx, chatID, senderID, content string, expiresAt time.Time) error {
 	_, err := models.ExecContext(tx, ctx, `insert into messages(chat_id,sender_user_id,content,expires_at) values ($1,$2,$3,$4)`, chatID, senderID, content, expiresAt)
+	return err
+}
+
+func (r *PostgresRepository) DeleteChatMessages(ctx context.Context, tx *sql.Tx, chatID string) error {
+	_, err := models.ExecContext(tx, ctx, `delete from messages where chat_id=$1`, chatID)
 	return err
 }
 

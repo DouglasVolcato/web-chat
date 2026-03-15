@@ -11,6 +11,7 @@ import (
 
 type fakeRepo struct {
 	contactsOK     bool
+	chatAccessOK   bool
 	chatID         string
 	notifySubs     []PushSubscription
 	senderName     string
@@ -24,6 +25,8 @@ type fakeRepo struct {
 	revoked        int
 	trimCalls      int
 	trimKeep       int
+	clearCalls     int
+	clearedChatID  string
 }
 
 func (f *fakeRepo) PurgeExpiredMessages(ctx context.Context, tx *sql.Tx) error { return nil }
@@ -32,6 +35,9 @@ func (f *fakeRepo) GetUserChats(ctx context.Context, tx *sql.Tx, userID string) 
 }
 func (f *fakeRepo) GetChatMessages(ctx context.Context, tx *sql.Tx, userID, chatID string) ([]Message, error) {
 	return nil, nil
+}
+func (f *fakeRepo) IsChatParticipant(ctx context.Context, tx *sql.Tx, userID, chatID string) (bool, error) {
+	return f.chatAccessOK, nil
 }
 func (f *fakeRepo) AreContacts(ctx context.Context, tx *sql.Tx, userID, targetID string) (bool, error) {
 	return f.contactsOK, nil
@@ -46,6 +52,11 @@ func (f *fakeRepo) CreateMessage(ctx context.Context, tx *sql.Tx, chatID, sender
 	if expiresAt.Before(time.Now().UTC().AddDate(10, 0, 0)) {
 		return errors.New("bad expiry")
 	}
+	return nil
+}
+func (f *fakeRepo) DeleteChatMessages(ctx context.Context, tx *sql.Tx, chatID string) error {
+	f.clearCalls++
+	f.clearedChatID = chatID
 	return nil
 }
 func (f *fakeRepo) TrimChatMessages(ctx context.Context, tx *sql.Tx, chatID string, keep int) error {
@@ -137,6 +148,35 @@ func TestSendMessageNotifiesAndAudits(t *testing.T) {
 	}
 	if n.payload.URL != "/app/messages/"+chatID {
 		t.Fatalf("expected deep-link URL, got %q", n.payload.URL)
+	}
+}
+
+func TestClearChatRequiresParticipant(t *testing.T) {
+	repo := &fakeRepo{chatAccessOK: false}
+	svc := NewService(repo, nil)
+
+	err := svc.ClearChat(context.Background(), nil, "u1", "chat-1", "127.0.0.1")
+	if !errors.Is(err, ErrChatForbidden) {
+		t.Fatalf("expected ErrChatForbidden, got %v", err)
+	}
+	if repo.clearCalls != 0 {
+		t.Fatalf("expected clear to not execute without access")
+	}
+}
+
+func TestClearChatDeletesMessagesAndAudits(t *testing.T) {
+	repo := &fakeRepo{chatAccessOK: true}
+	svc := NewService(repo, nil)
+
+	err := svc.ClearChat(context.Background(), nil, "u1", "chat-1", "127.0.0.1")
+	if err != nil {
+		t.Fatalf("unexpected err: %v", err)
+	}
+	if repo.clearCalls != 1 || repo.clearedChatID != "chat-1" {
+		t.Fatalf("expected chat messages to be deleted for chat-1, got calls=%d chat=%q", repo.clearCalls, repo.clearedChatID)
+	}
+	if len(repo.auditActions) == 0 || repo.auditActions[len(repo.auditActions)-1] != "chat.cleared" {
+		t.Fatalf("expected chat.cleared audit action, got %v", repo.auditActions)
 	}
 }
 

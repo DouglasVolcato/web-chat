@@ -2093,6 +2093,10 @@ footer.app-footer {
     gap: 0.25rem;
 }
 
+.wa-chat-header-actions form {
+    margin: 0;
+}
+
 /* --- WA Messages Thread --- */
 .wa-messages-thread {
     flex: 1;

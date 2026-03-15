@@ -45,6 +45,7 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 		router.Get("/", helpers.AuthDecorator(h.listChatsPage))
 		router.Get("/state", helpers.AuthDecorator(h.chatState))
 		router.Get("/{chatID}", helpers.AuthDecorator(h.chatPage))
+		router.Post("/{chatID}/clear", helpers.AuthDecorator(h.clearChat))
 		router.Post("/send", helpers.AuthDecorator(h.sendMessage))
 		router.Post("/contacts/qr", helpers.AuthDecorator(h.generateQR))
 		router.Post("/contacts/qr/redeem", helpers.AuthDecorator(h.redeemQR))
@@ -146,6 +147,31 @@ func (h *Handler) sendMessage(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), status)
 		return
 	}
+	helpers.Redirect(w, r, "/app/messages/"+chatID)
+}
+
+func (h *Handler) clearChat(w http.ResponseWriter, r *http.Request) {
+	if !helpers.ValidateCSRFToken(r) {
+		http.Error(w, "token CSRF inválido", http.StatusForbidden)
+		return
+	}
+	ctx, tx, done, user, err := authTx(r)
+	if err != nil {
+		helpers.RenderUnauthorized(w, r)
+		return
+	}
+	defer done()
+
+	chatID := chi.URLParam(r, "chatID")
+	if err := h.service.ClearChat(ctx, tx, user.ID, chatID, r.RemoteAddr); err != nil {
+		status := http.StatusBadRequest
+		if errors.Is(err, ErrChatForbidden) {
+			status = http.StatusForbidden
+		}
+		http.Error(w, err.Error(), status)
+		return
+	}
+
 	helpers.Redirect(w, r, "/app/messages/"+chatID)
 }
 
