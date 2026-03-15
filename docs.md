@@ -48,7 +48,6 @@ cp .env.example .env
 Edite o `.env` e atualize **obrigatoriamente**:
 
 - `GOOGLE_CLIENT_ID`
-- `OPENAI_API_KEY`
 - `JWT_SECRET`
 - `POSTGRES_*`
 - `API_URL`, `CLIENT_URL`, `HOST`

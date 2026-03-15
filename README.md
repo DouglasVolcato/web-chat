@@ -46,7 +46,6 @@ cp .env.example .env
 Campos essenciais:
 
 - `GOOGLE_CLIENT_ID` → Client ID do Google.
-- `OPENAI_API_KEY` → Chave da API da OpenAI.
 - `JWT_SECRET` → Segredo para assinar tokens.
 - `POSTGRES_*` → Dados do banco.
 - `API_URL`, `CLIENT_URL`, `HOST` → URLs da aplicação.
