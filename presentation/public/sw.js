@@ -50,7 +50,6 @@ self.addEventListener('fetch', (event) => {
   const requestUrl = new URL(request.url);
   const requestPath = requestUrl.pathname;
   const isSameOrigin = requestUrl.origin === self.location.origin;
-  const isMessageStream = request.headers.get('accept')?.includes('text/event-stream') || requestPath === `${basePath}/app/messages/stream`;
   const isStaticAsset =
     isSameOrigin &&
     (
@@ -59,17 +58,9 @@ self.addEventListener('fetch', (event) => {
       requestPath.startsWith(`${basePath}/icons/`)
     );
 
-  if (isMessageStream) {
-    event.respondWith(fetch(request));
-    return;
-  }
-
   if (isStaticAsset) {
     event.respondWith(cacheFirst(request));
-    return;
   }
-
-  event.respondWith(fetch(request));
 });
 
 async function cacheFirst(request) {

@@ -357,7 +357,7 @@
   let lastMessageState = '';
   let refreshingState = false;
   let fallbackPollTimer = 0;
-  let safetyPollTimer = 0;
+  let consistencyCheckTimer = 0;
 
   const refreshChatState = async () => {
     if (refreshingState || document.hidden) return;
@@ -417,23 +417,22 @@
     }, 15000);
   };
 
-  const stopSafetyPolling = () => {
-    if (!safetyPollTimer) return;
-    window.clearInterval(safetyPollTimer);
-    safetyPollTimer = 0;
+  const stopConsistencyChecks = () => {
+    if (!consistencyCheckTimer) return;
+    window.clearInterval(consistencyCheckTimer);
+    consistencyCheckTimer = 0;
   };
 
-  const startSafetyPolling = () => {
-    if (safetyPollTimer || document.hidden || !chatListEl) return;
-    const intervalMs = activeChatID ? 5000 : 10000;
-    safetyPollTimer = window.setInterval(() => {
+  const startConsistencyChecks = () => {
+    if (consistencyCheckTimer || document.hidden || !chatListEl) return;
+    consistencyCheckTimer = window.setInterval(() => {
       refreshChatState();
-    }, intervalMs);
+    }, 60000);
   };
 
   if (chatListEl) {
     window.addEventListener('focus', refreshChatState);
-    startSafetyPolling();
+    startConsistencyChecks();
     refreshChatState();
   }
 
@@ -493,13 +492,13 @@
       if (document.hidden) {
         clearReconnectTimer();
         stopPollingFallback();
-        stopSafetyPolling();
+        stopConsistencyChecks();
         closeMessageStream();
         return;
       }
 
       refreshChatState();
-      startSafetyPolling();
+      startConsistencyChecks();
       if (!streamConnected) {
         startPollingFallback();
         connectMessageStream();
@@ -509,23 +508,23 @@
     window.addEventListener('beforeunload', () => {
       clearReconnectTimer();
       stopPollingFallback();
-      stopSafetyPolling();
+      stopConsistencyChecks();
       closeMessageStream();
     });
 
     connectMessageStream();
   } else if (chatListEl) {
     startPollingFallback();
-    startSafetyPolling();
+    startConsistencyChecks();
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
         stopPollingFallback();
-        stopSafetyPolling();
+        stopConsistencyChecks();
         return;
       }
       refreshChatState();
       startPollingFallback();
-      startSafetyPolling();
+      startConsistencyChecks();
     });
   }
 
