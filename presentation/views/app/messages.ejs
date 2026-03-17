@@ -189,14 +189,14 @@
   };
   searchInput?.addEventListener('input', applyChatFilter);
 
+
   // Mobile sidebar toggle
   const sidebar = document.getElementById('wa-sidebar');
   document.getElementById('back-to-list-btn')?.addEventListener('click', () => sidebar?.classList.add('show'));
   const mobileMedia = window.matchMedia('(max-width: 991.98px)');
   const userAgent = String(navigator.userAgent || '');
   const isIOS = /iPhone|iPad|iPod/i.test(userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
-  const shouldStabilizeIOSKeyboard = isIOS && isStandalone;
+  const shouldStabilizeIOSKeyboard = isIOS;
 
   if (shouldStabilizeIOSKeyboard) {
     document.body.classList.add('wa-ios-standalone-chat');
